@@ -1,0 +1,23 @@
+#Python
+__pycache__/
+venv/
+env/
+*.egg-info/
+*.py[cod]
+*$py.class
+
+
+#Tests
+.pytest_cache/
+*.html
+
+
+#Build
+build/
+dist/
+*.spec
+*.iss
+
+
+#Random ideas, implementations, future changes to de program
+*.ideas
