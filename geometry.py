@@ -6,7 +6,6 @@ from typing import List, Tuple
 from math import sin, cos, pi, sqrt, atan, atan2
 
 
-
 def angle_rad(angle:float):
     return angle*pi/180
 
@@ -146,17 +145,17 @@ class Link:
 
 
 class Mechanism:
-    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]]):
+    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], init=True):
         """Representation of 4 bar mechanism, must be ordered as follows: a (crank), b (coupler), c (output), d (bench/ground)
            connections: numbers indicating the connection points from the links to use"""
         assert len(connections) == len(links), "Missmatch between connections and links"
         assert len(links) == 4, "Can only solve for 4 bar mechanism"
         
         self.origin = origin
-        #self.rotation = rotation
         self.links = [l.copy() for l in links]
         self.connections = connections
-        
+        self.moved = Vector(0,0)
+        self.idisplacement = Vector(0, 0)
         self.a = links[0].length(connections[0][0], connections[0][1])
         self.b = links[1].length(connections[1][0], connections[1][1])
         self.c = links[2].length(connections[2][0], connections[2][1])
@@ -166,6 +165,8 @@ class Mechanism:
         self.k3 = (self.a*self.a-self.b*self.b+self.c*self.c+self.d*self.d)/(2*self.a*self.c)
         self.k4 = self.d/self.b
         self.k5 = (self.c*self.c-self.d*self.d-self.a*self.a-self.b*self.b)/(2*self.a*self.b)
+        self.size = (self.a+self.b)*1.1
+        
         
         if rotation > 2*pi:
             self.rotation = angle_rad(rotation)
@@ -173,20 +174,53 @@ class Mechanism:
             self.rotation = rotation
         
         
+        if init:
+            self.initial_placement()
+        
+    
+    def location(self):
+        return self.origin+self.moved
+        
+    
+    
+    def initial_placement(self):
+        """This method allows to change the rotation and position of a mechanism that has already been created
+           Useful when copying a mechanism and desiring to change rotation and location of the new one"""
         self.links[3].rotate(self.rotation)
-        displacement = origin-links[3].connections[connections[3][0]]
-        self.links[3].translate(displacement.x, displacement.y)
+        self.idisplacement = self.origin-self.links[3].connections[self.connections[3][0]]
+        self.links[3].translate(self.idisplacement.x, self.idisplacement.y)
         
         for i in range(3):
             
             if i == 2:
-                self.links[i].translate(-self.links[i].connections[connections[i][1]].x, -self.links[i].connections[connections[i][1]].y)
-                self.links[i].rotate(vector_angle(self.links[i].connections[connections[i][1]], self.links[i].connections[connections[i][0]])+self.rotation+pi)
+                self.links[i].translate(-self.links[i].connections[self.connections[i][1]].x, -self.links[i].connections[self.connections[i][1]].y)
+                self.links[i].rotate(vector_angle(self.links[i].connections[self.connections[i][1]], self.links[i].connections[self.connections[i][0]])+self.rotation+pi)
             else:
-                self.links[i].translate(-self.links[i].connections[connections[i][0]].x, -self.links[i].connections[connections[i][0]].y)
-                self.links[i].rotate(-vector_angle(self.links[i].connections[connections[i][0]], self.links[i].connections[connections[i][1]])+self.rotation)
-        
-        
+                self.links[i].translate(-self.links[i].connections[self.connections[i][0]].x, -self.links[i].connections[self.connections[i][0]].y)
+                self.links[i].rotate(-vector_angle(self.links[i].connections[self.connections[i][0]], self.links[i].connections[self.connections[i][1]])+self.rotation)
+    
+    
+    def copy(self):
+        return Mechanism(self.origin.copy(), self.rotation, links=self.links, connections=[i for i in self.connections], init=False)
+    
+    
+    
+    def translate(self, x:float, y:float):
+        self.moved += Vector(x, y)
+    
+    
+    def rotate(self, angle:float):
+        movement_ground = self.idisplacement + self.moved
+        self.links[3].translate(-movement_ground.x, -movement_ground.y)
+        self.links[3].rotate(angle)
+        for i in range(3):
+            self.links[i].rotate(angle)
+        self.links[3].translate(movement_ground.x, movement_ground.y)
+        self.rotation+=angle
+    
+    
+    def rotate_angle(self, angle:float):
+        self.rotate(angle_rad(angle))
     
     
     def output_rad(self, input_rad):
@@ -256,6 +290,8 @@ class Mechanism:
         output2.rotate(ob)
         
         crank.translate(self.origin.x, self.origin.y)
+        crank.translate(self.moved.x, self.moved.y)
+        self.links[3].translate(self.moved.x, self.moved.y)
         coupler.translate(crank.connections[self.connections[0][1]].x, crank.connections[self.connections[0][1]].y)
         coupler2.translate(crank.connections[self.connections[0][1]].x, crank.connections[self.connections[0][1]].y)
         output.translate(self.links[3].connections[self.connections[3][1]].x, self.links[3].connections[self.connections[3][1]].y)
@@ -263,12 +299,43 @@ class Mechanism:
         
         
         return [crank, coupler, output, self.links[3]], [crank, coupler2, output2, self.links[3]]
+    
 
 
 class Machine:
     def __init__(self, mechanisms:List[Mechanism]):
-        """A machine is defined here as one or more 4-bar mechanisms connected"""
+        """A machine is defined here as one or more 4-bar mechanisms connected
+           - First Mechanism must be the input mechanism
+           - The next four bar mechanisms must be connected to the output of the previous one,
+             for this to happen one of the connection points should be the ground-output coordinate of the previous mechanim,
+             the other connection could be anywhere else on the output link of the previous mechanism this would define the crank"""
         self.mechanisms = mechanisms
+    
+    
+    def solution(self, angle_rad, pattern:list=0)->List[List[Link]]:
+        inversions = None
+        if type(pattern) == list:
+            inversions = pattern
+        elif pattern:
+            inversions = [1 for i in range(len(self.mechanisms))]
+        else:
+            inversions = [0 for i in range(len(self.mechanisms))]
+        
+        snapshot = []
+        start = self.mechanisms[0].solution(angle_rad)[inversions[0]]
+        output_start = self.mechanisms[0].output_rad(angle_rad)[inversions[0]]+self.mechanisms[0].rotation #Absolute angle
+        
+        snapshot.append(start)
+        counter = 1
+        
+        for mech in self.mechanisms[counter:]:
+            n_solution = mech.solution(output_start-mech.rotation)[inversions[counter]]
+            snapshot.append(n_solution)
+            output_start = mech.output_rad(output_start-mech.rotation)[inversions[counter]]+mech.rotation
+            counter+=1
+        return snapshot
+        
+    
 
 
 if __name__ == "__main__":
