@@ -7,7 +7,6 @@ from typing import List
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-
 def plot_link(link:gm.Link):
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -60,7 +59,7 @@ def plot_machine(mechanisms:List[List[gm.Link]]):
     plt.show()
 
 
-def plot_rotation(mechanism:gm.Mechanism, frames:int, inversion:int=0):
+def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     s1 = mechanism.solution(0)[inversion]
@@ -92,6 +91,62 @@ def plot_rotation(mechanism:gm.Mechanism, frames:int, inversion:int=0):
     anim.save("advances.gif")
     plt.show()
 
+
+def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0):
+    """
+    Inversion can be either 0 for 0s list a 1 for 1s list or a list indicating the inversion for each mechanism
+    """
+    
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    
+    starter_sol = machine.solution(0, inversion)
+    
+    ax.set_xlim([-1.5, 5])
+    ax.set_ylim([-2.5, 4])
+    
+    #plot_machine(starter_sol)
+    
+    #Important to skip crank for all mechanisms except input one
+    lines = []
+    current_mech = 0
+    current_link = 0
+    for mechanism_ in starter_sol:
+        lines.append([])
+        current_link = 0
+        
+        for link_ in mechanism_:
+            lines[-1].append([])
+            if not(current_mech != 0 and current_link == 0):
+                for curve_ in link_.curves:
+                    lines[-1][-1].append(*ax.plot([vector.x for vector in curve_.vectors], [vector.y for vector in curve_.vectors]))
+            current_link+=1
+        current_mech+=1
+    
+    
+    def animate(i):
+        radian = 2*gm.pi*i/frames
+        solution = machine.solution(radian, inversion)
+        for mechanism in range(len(lines)):
+            for link in range(len(lines[mechanism])):
+                counter = 0
+                if mechanism != 0 and link == 0:
+                    continue
+                for curve in solution[mechanism][link].curves:
+                    lines[mechanism][link][counter].set_data([v.x for v in curve.vectors], [v.y for v in curve.vectors])
+                    counter+=1
+        
+        ret = []
+        for mech in lines:
+            for link in mech:
+                for curve in link:
+                    ret.append(curve)
+        
+        return ret
+    
+    anim = FuncAnimation(fig, animate, frames=frames, interval=20, blit=True)
+    anim.save("multiple.gif")
+    plt.show()
 
 
 
@@ -131,8 +186,9 @@ if __name__ == "__main__":
     #plot_link(mech.solution(0*gm.pi)[1][0])
     #plot_mechanism(*mech2.solution(0.2*gm.pi)[1])
     #plot_mechanism(*mech.solution(0.2*gm.pi)[1])
-    plot_machine(machine.solution(0.2*gm.pi, pattern=1))
+    #plot_machine(machine.solution(0.2*gm.pi, pattern=1))
     #plot_rotation(mech, frames=100, inversion=1)
+    plot_rotation_mach(machine, frames=100, inversion=1)
 
 
 

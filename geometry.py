@@ -281,6 +281,7 @@ class Mechanism:
         coupler2 = self.links[1].copy()
         output = self.links[2].copy()
         output2 = self.links[2].copy()
+        ground = self.links[3].copy()
         
         
         crank.rotate(angle_rad)
@@ -291,14 +292,14 @@ class Mechanism:
         
         crank.translate(self.origin.x, self.origin.y)
         crank.translate(self.moved.x, self.moved.y)
-        self.links[3].translate(self.moved.x, self.moved.y)
+        ground.translate(self.moved.x, self.moved.y)
         coupler.translate(crank.connections[self.connections[0][1]].x, crank.connections[self.connections[0][1]].y)
         coupler2.translate(crank.connections[self.connections[0][1]].x, crank.connections[self.connections[0][1]].y)
-        output.translate(self.links[3].connections[self.connections[3][1]].x, self.links[3].connections[self.connections[3][1]].y)
-        output2.translate(self.links[3].connections[self.connections[3][1]].x, self.links[3].connections[self.connections[3][1]].y)
+        output.translate(ground.connections[self.connections[3][1]].x, ground.connections[self.connections[3][1]].y)
+        output2.translate(ground.connections[self.connections[3][1]].x, ground.connections[self.connections[3][1]].y)
         
         
-        return [crank, coupler, output, self.links[3]], [crank, coupler2, output2, self.links[3]]
+        return [crank, coupler, output, ground], [crank, coupler2, output2, ground]
     
 
 
