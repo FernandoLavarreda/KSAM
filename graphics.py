@@ -88,11 +88,11 @@ def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0):
         return ret
     
     anim = FuncAnimation(fig, animate, frames=frames, interval=20, blit=True)
-    anim.save("advances.gif")
+    #anim.save("advances.gif")
     plt.show()
 
 
-def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0):
+def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, colors=["red", "purple", "green", "orange", "blue", "black", "yellow"]):
     """
     Inversion can be either 0 for 0s list a 1 for 1s list or a list indicating the inversion for each mechanism
     """
@@ -102,7 +102,7 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0):
     
     starter_sol = machine.solution(0, inversion)
     
-    ax.set_xlim([-1.5, 5])
+    ax.set_xlim([-1.5, 7])
     ax.set_ylim([-2.5, 4])
     
     #plot_machine(starter_sol)
@@ -111,6 +111,7 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0):
     lines = []
     current_mech = 0
     current_link = 0
+    color = 0
     for mechanism_ in starter_sol:
         lines.append([])
         current_link = 0
@@ -119,8 +120,9 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0):
             lines[-1].append([])
             if not(current_mech != 0 and current_link == 0):
                 for curve_ in link_.curves:
-                    lines[-1][-1].append(*ax.plot([vector.x for vector in curve_.vectors], [vector.y for vector in curve_.vectors]))
+                    lines[-1][-1].append(*ax.plot([vector.x for vector in curve_.vectors], [vector.y for vector in curve_.vectors], color=colors[color%len(colors)]))
             current_link+=1
+            color+=1
         current_mech+=1
     
     
@@ -145,7 +147,7 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0):
         return ret
     
     anim = FuncAnimation(fig, animate, frames=frames, interval=20, blit=True)
-    anim.save("multiple.gif")
+    #anim.save("multiple.gif")
     plt.show()
 
 
@@ -179,15 +181,21 @@ if __name__ == "__main__":
     mech2.rotate(0.2*gm.pi)
     mech2.translate(mech.links[3].connections[mech.connections[3][1]].x, mech.links[3].connections[mech.connections[3][1]].y)
     
-    machine = gm.Machine([mech, mech2])
+    mech3 = mech2.copy()
+    mech3.translate(mech.links[3].connections[mech.connections[3][1]].x, mech.links[3].connections[mech.connections[3][1]].y)
+    mech3.translate(2, 0)
+    
+    machine = gm.Machine([mech, mech2, mech3])
     
     #plot_link(mech.links[1])
     #plot_link(mech.solution(0*gm.pi)[1][1])
     #plot_link(mech.solution(0*gm.pi)[1][0])
     #plot_mechanism(*mech2.solution(0.2*gm.pi)[1])
+    #plot_mechanism(*mech3.solution(0.2*gm.pi)[1])
     #plot_mechanism(*mech.solution(0.2*gm.pi)[1])
     #plot_machine(machine.solution(0.2*gm.pi, pattern=1))
-    #plot_rotation(mech, frames=100, inversion=1)
+    #plot_machine(machine.solution(0.2*gm.pi, pattern=1))
+    plot_rotation_mech(mech, frames=100, inversion=1)
     plot_rotation_mach(machine, frames=100, inversion=1)
 
 
