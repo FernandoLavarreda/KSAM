@@ -19,5 +19,6 @@ dist/
 *.iss
 
 
-#Random ideas, implementations, future changes to de program
-*.ideas
+#Secrets
+github
+*.pub
