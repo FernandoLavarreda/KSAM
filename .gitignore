@@ -20,5 +20,4 @@ dist/
 
 
 #Secrets
-github
-*.pub
+not_share/
