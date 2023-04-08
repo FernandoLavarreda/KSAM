@@ -7,6 +7,7 @@ from typing import List
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
+
 def plot_link(link:gm.Link):
     fig = plt.figure()
     ax = fig.add_subplot(111)

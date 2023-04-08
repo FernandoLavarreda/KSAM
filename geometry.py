@@ -67,11 +67,13 @@ def vector_angle(a:Vector, b:Vector):
 
 
 class Curve:
-    def __init__(self, origin:Vector, vectors:List[Vector]):
+    def __init__(self, origin:Vector, vectors:List[Vector], name="", functions=""):
         """Series of Vectors to create a profile
-           origin: Absolute position where the start of the Curve is locateds"""
+           origin: Absolute position where the start of the Curve is located"""
         self.vectors = vectors
         self.origin = origin
+        self.name = name
+        self.functions = functions
     
     
     def rotate(self, angle:float):
@@ -93,12 +95,12 @@ class Curve:
     
     
     def copy(self):
-        return Curve(self.origin.copy(), [v.copy() for v in self.vectors])
+        return Curve(self.origin.copy(), [v.copy() for v in self.vectors], self.name, self.functions)
 
 
 
 class Link:
-    def __init__(self, origin:Vector, connections:List[Vector], curves:List[Curve], thickness:float):
+    def __init__(self, origin:Vector, connections:List[Vector], curves:List[Curve], thickness:float, name=""):
         """A link is a segment of a mechanim for which the position and stress are desired
            origin: Absolute position where the start of the Link is located
            connections: Vectors where another link may be connected to create a mechanim"""
@@ -106,6 +108,7 @@ class Link:
         self.connections = connections
         self.curves = curves
         self.thickness = thickness
+        self.name = name
     
     
     def rotate(self, angle:float):
@@ -140,7 +143,7 @@ class Link:
     
     
     def copy(self):
-        return Link(self.origin.copy(), [conn.copy() for conn in self.connections], [c.copy() for c in self.curves], self.thickness)
+        return Link(self.origin.copy(), [conn.copy() for conn in self.connections], [c.copy() for c in self.curves], self.thickness, self.name)
 
 
 
