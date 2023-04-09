@@ -4,7 +4,7 @@
 
 import re
 import csv
-from geometry import Curve, Vector
+from geometry import Curve, Vector, Link
 from typing import Tuple, List
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -61,6 +61,8 @@ class UICurve(ttk.Frame):
         self.select.bind("<<ComboboxSelected>>", self.selection)
         self.select.grid(row=0, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
         self.functions.bind("<Return>", self.func)
+        if self.curves:
+            self.select["values"] = (c.name for c in curves)
         #------------------------------
     
     
@@ -195,12 +197,193 @@ class UICurve(ttk.Frame):
         self.srotate.set("0")
         if len(curve.vectors):
             self.graphics.static_drawing([[v.x for v in curve.vectors], [v.y for v in curve.vectors]])
+
+
+
+
+class UILink(ttk.Frame):
+    def __init__(self, master, curves:List[Curve], links:List[Link]):
+        super().__init__(master)
+        self.curves = curves
+        self.links = links
+        self.graphics = Graphics(self, (8, 6), row=0, column=0, columnspan=1, rowspan=10, dpi=100, title="")
+        self.cursor = -1
+        self.temp = None
+        #-----------Controls------------
+        #Variables
+        self.sname = tk.StringVar(self)
+        self.sthickness = tk.StringVar(self)
+        self.sadd_curve = tk.StringVar(self)
+        self.sremove_curve = tk.StringVar(self)
+        self.sconnectionx = tk.StringVar(self)
+        self.sconnectiony = tk.StringVar(self)
+        #--------
+        self.controls = tk.LabelFrame(self, text="Controls")
+        self.controls.grid(row=10, column=0, rowspan=1, sticky=tk.SE+tk.NW)
+        ttk.Label(self.controls, text="Name:").grid(row=0, column=0, sticky=tk.SE+tk.NW)
+        ttk.Entry(self.controls, textvariable=self.sname).grid(row=1, column=0, sticky=tk.SE+tk.NW, columnspan=2)
+        ttk.Label(self.controls, text="Thickness:").grid(row=2, column=0, sticky=tk.SE+tk.NW)
+        ttk.Entry(self.controls, textvariable=self.sthickness).grid(row=3, column=0, sticky=tk.SE+tk.NW, columnspan=2)
+        ttk.Label(self.controls, text="Curves:").grid(row=0, column=2, sticky=tk.SE+tk.NW, padx=(25, 0))
+        ttk.Button(self.controls, text="add", command=self.add_curve).grid(row=1, column=2, sticky=tk.SE+tk.NW, columnspan=1, padx=(25, 0))
+        self.select_add_curve = ttk.Combobox(self.controls, state="readonly")
+        ttk.Button(self.controls, text="remove", command=self.remove_curve).grid(row=2, column=2, sticky=tk.SE+tk.NW, columnspan=1, padx=(25, 0))
+        self.select_remove_curve = ttk.Combobox(self.controls, state="readonly")
+        self.select_add_curve.grid(row=1, column=3, sticky=tk.SE+tk.NW, columnspan=2)
+        self.select_remove_curve.grid(row=2, column=3, sticky=tk.SE+tk.NW, columnspan=2)
+        ttk.Label(self.controls, text="Connections:").grid(row=0, column=5, sticky=tk.SE+tk.NW, padx=(25, 0))
+        ttk.Label(self.controls, text="x:").grid(row=1, column=5, sticky=tk.SE+tk.NW, padx=(25, 0))
+        ttk.Entry(self.controls, width=10, textvariable=self.sconnectionx).grid(row=1, column=6, sticky=tk.SE+tk.NW)
+        ttk.Label(self.controls, text="y:").grid(row=2, column=5, sticky=tk.SE+tk.NW, padx=(25, 0))
+        ttk.Entry(self.controls, width=10, textvariable=self.sconnectiony).grid(row=2, column=6, sticky=tk.SE+tk.NW)
+        ttk.Button(self.controls, text="add", command=self.add_connection).grid(row=3, column=5, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
+        ttk.Button(self.controls, text="remove", command=self.remove_connection).grid(row=4, column=5, sticky=tk.SE+tk.NW, columnspan=1, padx=(25, 0))
+        self.select_connection = ttk.Combobox(self.controls, state="readonly", width=5)
+        self.select_connection.grid(row=4, column=6, sticky=tk.SE+tk.NW, columnspan=1)
+        ttk.Button(self.controls, text="save", command=self.save).grid(row=2, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
+        ttk.Button(self.controls, text="new", command=self.new).grid(row=1, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
+        ttk.Button(self.controls, text="delete", command=self.delete).grid(row=3, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
+        self.select = ttk.Combobox(self.controls, state="readonly")
+        self.select.bind("<<ComboboxSelected>>", self.selection)
+        self.select_connection.bind("<<ComboboxSelected>>", self.select_conn)
+        self.select.grid(row=0, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
+        self.curves_available()
+        #----------------------------
+    
+    
+    def select_conn(self, *args):
+        if self.cursor != -1:
+            if self.select_connection.current() != -1:
+                vec = self.temp.connections[self.select_connection.current()]
+                self.sconnectionx.set(str(vec.x))
+                self.sconnectiony.set(str(vec.y))
+    
+    
+    def curves_available(self):
+        if self.curves:
+            self.select_add_curve["values"] = (c.name for c in self.curves)
+    
+    
+    def add_connection(self):
+        if self.cursor != -1:
+            try:
+                x_val = float(self.sconnectionx.get())
+                y_val = float(self.sconnectiony.get())
+                self.temp.connections.append(Vector(x_val, y_val))
+                self.select_connection["values"] = list(self.select_connection["values"])+ [str(len(self.temp.connections))]
+            except Exception as e:
+                msg.showerror(parent=self, title="Error", message="x,y must be real numbers")
+            else:
+                self.sconnectionx.set('')
+                self.sconnectiony.set('')
+    
+    
+    def remove_connection(self):
+        if self.cursor != -1:
+            if self.select_connection.current() != -1:
+                self.temp.connections.pop(self.select_connection.current())
+                self.select_connection["values"] = [str(i+1) for i in range(len(self.temp.connections))]
+                self.select_connection.set('')
+                self.sconnectionx.set('')
+                self.sconnectiony.set('')
+    
+    
+    def add_curve(self):
+        if self.select_add_curve.current() != -1:
+           self.temp.curves.append(self.curves[self.select_add_curve.current()].copy())
+           self.select_remove_curve["values"] = (*self.select_remove_curve["values"], self.curves[self.select_add_curve.current()].name)
+           self.select_add_curve.set('')
+           self.load_link(self.temp)
+    
+    
+    def remove_curve(self):
+        if self.select_remove_curve.current()!=-1:
+            self.temp.curves.pop(self.select_remove_curve.current())
+            new_list = list(self.select_remove_curve.current["values"]).pop(self.select_remove_curve.current())
+            self.select_remove_curve.current["values"] = tuple(new_list)
+            self.select_remove_curve.set('')
+    
+    
+    def save(self):
+        if self.cursor != -1:
+            try:
+                n = float(self.sthickness.get())
+                if n<=0:
+                    raise ValueError("")
+            except Exception:
+                msg.showerror(parent=self, title="Error", message="Thickness must be set to a number>0")
+            else:
+                self.temp.name = self.sname.get()
+                self.temp.thickness = float(self.sthickness.get())
+                list_options = list(self.select["values"])
+                list_options[self.cursor] = self.temp.name
+                self.select["values"] = tuple(list_options)
+                self.links[self.cursor] = self.temp.copy()
+                self.select.set(self.select["values"][self.cursor])
+    
+    
+    def new(self):
+        biggest = 1
+        for v in self.select["values"]:
+            try:
+                ff = int(re.search(r"\d+", re.search(r"new\s\d+", v).group()).group())
+                if ff>=biggest:
+                    biggest = ff+1
+            except AttributeError:
+                pass
+        name = "new "+str(biggest)
         
+        nlink = Link(Vector(0, 0), [], [], 0.1, name)
+        self.temp = nlink
+        self.load_link(self.temp)
+        self.links.append(nlink)
+        self.cursor = len(self.links)-1
+        self.select["values"] = (*self.select["values"], name)
+        self.select.set(name)
+    
+    
+    def delete(self):
+        if self.cursor != -1:
+            self.links.pop(self.cursor)
+            counter = 0
+            options = []
+            for v in self.select["values"]:
+                if counter != self.cursor:
+                    options.append(v)
+                counter+=1
+            self.select["values"] = options
+            self.select.set('')
+            self.load_link(Link(Vector(0, 0), (), (), 0))
+            self.cursor = -1
+    
+    
+    def selection(self, *args):
+        self.cursor = self.select.current()
+        self.temp = self.links[self.cursor].copy()
+        self.load_link(self.temp)
+    
+    
+    def load_link(self, link:Link):
+        self.graphics.clear()
+        self.sname.set(link.name)
+        self.sthickness.set(str(round(link.thickness, 6)))
+        self.select_remove_curve["values"] = (c.name for c in link.curves)
+        self.select_remove_curve.set('')
+        self.select_connection["values"] = [str(i+1) for i in range(len(link.connections))]
+        self.select_connection.set('')
+        self.sconnectionx.set('')
+        self.sconnectiony.set('')
+        if link.curves:
+            for c in link.curves:
+                self.graphics.static_drawing()
+
+
     
 
 if __name__ == "__main__":
     wd = tk.Tk()
-    nn = UICurve(wd, [])
+    #nn = UICurve(wd, [])
+    nn = UILink(wd, [], [])
     nn.grid(row=0, column=0)
     wd.mainloop()
 
