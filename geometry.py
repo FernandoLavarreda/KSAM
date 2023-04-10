@@ -2,7 +2,7 @@
 #Program to analyze Mechanisms, Graduation Project UVG
 
 
-from typing import List, Tuple
+from typing import List, Tuple, Mapping
 from math import sin, cos, pi, sqrt, atan, atan2, asin
 
 
@@ -462,8 +462,9 @@ class Machine:
         self.mechanisms = mechanisms
     
     
-    def solution(self, angle_rad, pattern:list=0)->List[List[Link]]:
+    def solution(self, angle_rad, power_graph:List[List[int]], input_graph:List[int], pattern:list=0)->List[List[Link]]:
         inversions = None
+        solutions = [0 for i in range(len(self.mechanisms)+1)]
         if type(pattern) == list:
             inversions = pattern
         elif pattern:
@@ -472,6 +473,17 @@ class Machine:
             inversions = [0 for i in range(len(self.mechanisms))]
         
         snapshot = []
+        
+        sorting = topological_sort(power_graph)
+        solutions[0] = self.mechanisms[0].rotation+angle_rad
+        counter = 1
+        for mechanism_ in sorting[1:]:
+            n_solution = self.mechanisms[mechanism_-1].solution(solutions[input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]
+            snapshot.append(n_solution)
+            if power_graph[mechanism_]:
+                solutions[mechanism_] = self.mechanisms[mechanism_-1].output_rad(solutions[input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]+self.mechanisms[mechanism_-1].rotation
+        
+        """
         start = self.mechanisms[0].solution(angle_rad)[inversions[0]]
         output_start = self.mechanisms[0].output_rad(angle_rad)[inversions[0]]+self.mechanisms[0].rotation #Absolute angle
         
@@ -483,8 +495,23 @@ class Machine:
             snapshot.append(n_solution)
             output_start = mech.output_rad(output_start-mech.rotation)[inversions[counter]]+mech.rotation
             counter+=1
+        """
         return snapshot
         
+
+def topological_sort(mechanisms:List[List[int]]):
+    found = []
+    def topo_sort(mechanisms:List[List[int]], node_start:int=0):
+        """Find the dependencies of mechanisms in a machine"""
+        if node_start in found:
+            return
+        found.append(node_start)
+        for node in mechanisms[node_start]:
+            topo_sort(mechanisms, node)
+        for nnode in range(len(mechanisms)):
+            topo_sort(mechanisms, nnode)
+    topo_sort(mechanisms)
+    return found
     
 
 
@@ -493,6 +520,7 @@ if __name__ == "__main__":
     print(a)
     a.rotate_angle(180)
     print(a+b)
+    print(topological_sort([[1, 2, 3], [4], [5], [], [], []]))
 
 
 

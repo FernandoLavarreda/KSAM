@@ -94,7 +94,7 @@ def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colo
     plt.show()
 
 
-def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, colors=["red", "purple", "green", "orange", "blue", "black", "yellow"]):
+def plot_rotation_mach(machine:gm.Machine, frames:int, power_graph:List[List[int]], input_graph:List[int], inversion:int=0, lims=[[-1.5, 7], [-2.5, 4]], colors=["red", "purple", "green", "orange", "blue", "black", "yellow"]):
     """
     Inversion can be either 0 for 0s list a 1 for 1s list or a list indicating the inversion for each mechanism
     """
@@ -102,10 +102,10 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, colors=[
     fig = plt.figure()
     ax = fig.add_subplot(111)
     
-    starter_sol = machine.solution(0, inversion)
+    starter_sol = machine.solution(0, power_graph, input_graph, inversion)
     
-    ax.set_xlim([-1.5, 7])
-    ax.set_ylim([-2.5, 4])
+    ax.set_xlim(lims[0])
+    ax.set_ylim(lims[1])
     
     #plot_machine(starter_sol)
     
@@ -130,7 +130,7 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, colors=[
     
     def animate(i):
         radian = 2*gm.pi*i/frames
-        solution = machine.solution(radian, inversion)
+        solution = machine.solution(radian, power_graph, input_graph, inversion)
         for mechanism in range(len(lines)):
             for link in range(len(lines[mechanism])):
                 counter = 0
@@ -213,10 +213,20 @@ if __name__ == "__main__":
     side3 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 2), gm.Vector(1, 2)])
     side4 = gm.Curve(gm.Vector(0, 0), [gm.Vector(1, 0), gm.Vector(1, 2)])
     slider = gm.Link(gm.Vector(0, 0), [gm.Vector(0.5, 1)], [side1, side2, side3, side4], 0.0)
-    slider_crank = gm.SliderCrank(gm.Vector(0, 0), 0, [crank, coupler, slider, ground], ((0, 1), (0, 1), (0,), (0,)), offset=-2)
-    slider_crank.rotate(1/3*gm.pi)
+    piston_1 = gm.SliderCrank(gm.Vector(0, 0), 0, [crank, coupler, slider, ground], ((0, 1), (0, 1), (0,), (0,)))
+    piston_2 = piston_1.copy()
+    piston_3 = piston_1.copy()
+    
+    piston_1.rotate(1/6*gm.pi)
+    piston_2.rotate(5/6*gm.pi)
+    piston_3.rotate(3/2*gm.pi)
+    compresor = gm.Machine([piston_1, piston_2, piston_3])
+    plot_rotation_mach(compresor, frames=100, power_graph=[[1, 2, 3], [], [], []], input_graph=[0, 0, 0, 0], inversion=1, lims=[[-16, 16], [-17, 12]])
+    
+    #plot_rotation_mech(piston_1, frames=100, inversion=1)
+    
+    
     #machine_ = gm.Machine([slider_crank,])
-    plot_rotation_mech(slider_crank, frames=100, inversion=1)
     #plot_rotation_mach(machine_, frames=100, inversion=1)
     
     #plot_link(mech.links[1])
@@ -228,7 +238,7 @@ if __name__ == "__main__":
     #plot_machine(machine.solution(0.2*gm.pi, pattern=1))
     #plot_machine(machine.solution(0.2*gm.pi, pattern=1))
     #plot_rotation_mech(mech, frames=100, inversion=1)
-    #plot_rotation_mach(machine, frames=100, inversion=1)
+    #plot_rotation_mach(machine, frames=100, power_graph=[[1], [2], [3], []], input_graph=[0, 0, 1, 2], inversion=1)
 
 
 
