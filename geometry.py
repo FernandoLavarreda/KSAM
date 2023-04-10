@@ -453,16 +453,25 @@ class SliderCrank:
 
 
 class Machine:
-    def __init__(self, mechanisms:List[Mechanism]):
+    def __init__(self, mechanisms:List[Mechanism], power_graph:List[List[int]]):
         """A machine is defined here as one or more 4-bar mechanisms connected
            - First Mechanism must be the input mechanism
-           - The next four bar mechanisms must be connected to the output of the previous one,
-             for this to happen one of the connection points should be the ground-output coordinate of the previous mechanim,
-             the other connection could be anywhere else on the output link of the previous mechanism this would define the crank"""
+           - power_graph: indicates what a mechanim powers. It is a list of lists where list 0 represents the input crank from the first mechanism
+             so mechanism '0' is represented in list '1'. Example: [[1, 3], [], [], [2]] in this example the input crank powers mechanim 1 and 3 and mechanim 3 powers mechanim 2
+             if a mechanism doesn't power anything place an empty list. Bear in mind mechanism 2 will only be powered by the output of mechanism 3.
+           - Important to consider that a mechanism cannot be powered be more than one output, if this happens only the last one will be taken as power
+        """
         self.mechanisms = mechanisms
+        self.power_graph = power_graph
+        self.input_graph = [-1 for i in range(len(power_graph))]
+        for power in range(len(power_graph)):
+            for receiver in power_graph[power]:
+                self.input_graph[receiver] = power
+        if -1 in self.input_graph[1:]:
+            raise ValueError("One or more mechanisms are not powered")
     
     
-    def solution(self, angle_rad, power_graph:List[List[int]], input_graph:List[int], pattern:list=0)->List[List[Link]]:
+    def solution(self, angle_rad, pattern:list=0)->List[List[Link]]:
         inversions = None
         solutions = [0 for i in range(len(self.mechanisms)+1)]
         if type(pattern) == list:
@@ -474,30 +483,17 @@ class Machine:
         
         snapshot = []
         
-        sorting = topological_sort(power_graph)
+        sorting = topological_sort(self.power_graph)
         solutions[0] = self.mechanisms[0].rotation+angle_rad
         counter = 1
         for mechanism_ in sorting[1:]:
-            n_solution = self.mechanisms[mechanism_-1].solution(solutions[input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]
+            n_solution = self.mechanisms[mechanism_-1].solution(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]
             snapshot.append(n_solution)
-            if power_graph[mechanism_]:
-                solutions[mechanism_] = self.mechanisms[mechanism_-1].output_rad(solutions[input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]+self.mechanisms[mechanism_-1].rotation
+            if self.power_graph[mechanism_]:
+                solutions[mechanism_] = self.mechanisms[mechanism_-1].output_rad(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]+self.mechanisms[mechanism_-1].rotation
         
-        """
-        start = self.mechanisms[0].solution(angle_rad)[inversions[0]]
-        output_start = self.mechanisms[0].output_rad(angle_rad)[inversions[0]]+self.mechanisms[0].rotation #Absolute angle
-        
-        snapshot.append(start)
-        counter = 1
-        
-        for mech in self.mechanisms[counter:]:
-            n_solution = mech.solution(output_start-mech.rotation)[inversions[counter]]
-            snapshot.append(n_solution)
-            output_start = mech.output_rad(output_start-mech.rotation)[inversions[counter]]+mech.rotation
-            counter+=1
-        """
         return snapshot
-        
+
 
 def topological_sort(mechanisms:List[List[int]]):
     found = []
