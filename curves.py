@@ -378,6 +378,10 @@ class UILink(ttk.Frame):
                 self.graphics.static_drawing()
 
 
+
+class UIMechanism
+
+
     
 
 if __name__ == "__main__":

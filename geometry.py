@@ -3,7 +3,7 @@
 
 
 from typing import List, Tuple
-from math import sin, cos, pi, sqrt, atan, atan2
+from math import sin, cos, pi, sqrt, atan, atan2, asin
 
 
 def angle_rad(angle:float):
@@ -245,7 +245,7 @@ class Mechanism:
     def output_angle(self, input_angle):
         """input_angle: crank angle relative to ground in degrees
         raise a ValueError if the crank can't be placed in that position"""
-        a, b = output_rad(angle_rad(input_angle))
+        a, b = self.output_rad(angle_rad(input_angle))
         return rad_angle(a), rad_angle(b)
     
     
@@ -303,7 +303,153 @@ class Mechanism:
         
         
         return [crank, coupler, output, ground], [crank, coupler2, output2, ground]
+
+
+
+class SliderCrank:
+    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], offset:float=0, init=True):
+        """Representation of 4 bar mechanism, must be ordered as follows: a (crank), b (coupler), c (output), d (bench/ground)
+           connections: numbers indicating the connection points from the links to use"""
+        assert len(connections) == len(links), "Missmatch between connections and links"
+        assert len(links) == 4, "Can only solve for 4 bar mechanism"
+        
+        self.origin = origin
+        self.links = [l.copy() for l in links]
+        self.connections = connections
+        self.moved = Vector(0,0)
+        self.idisplacement = Vector(0, 0)
+        self.a = links[0].length(connections[0][0], connections[0][1])
+        self.b = links[1].length(connections[1][0], connections[1][1])
+        self.c = offset
+        self.size = (self.a+self.b)*1.1
+        
+        
+        if rotation > 2*pi:
+            self.rotation = angle_rad(rotation)
+        else:
+            self.rotation = rotation
+        
+        
+        if init:
+            self.initial_placement()
+        
     
+    def location(self):
+        return self.origin+self.moved
+    
+    
+    def initial_placement(self):
+        """This method allows to change the rotation and position of a mechanism that has already been created
+           Useful when copying a mechanism and desiring to change rotation and location of the new one"""
+        self.links[3].rotate(self.rotation)
+        self.idisplacement = self.origin-self.links[3].connections[self.connections[3][0]]
+        self.links[3].translate(self.idisplacement.x, self.idisplacement.y)
+        
+        for i in range(3):
+            
+            if i == 2:
+                self.links[i].translate(-self.links[i].connections[self.connections[i][0]].x, -self.links[i].connections[self.connections[i][0]].y)
+                self.links[i].rotate(self.rotation)
+            elif i == 1:
+                self.links[i].translate(-self.links[i].connections[self.connections[i][1]].x, -self.links[i].connections[self.connections[i][1]].y)
+                self.links[i].rotate(-vector_angle(self.links[i].connections[self.connections[i][0]], self.links[i].connections[self.connections[i][1]])+self.rotation+pi)
+            else:
+                self.links[i].translate(-self.links[i].connections[self.connections[i][0]].x, -self.links[i].connections[self.connections[i][0]].y)
+                self.links[i].rotate(-vector_angle(self.links[i].connections[self.connections[i][0]], self.links[i].connections[self.connections[i][1]])+self.rotation)
+    
+    
+    def copy(self):
+        return SliderCrank(self.origin.copy(), self.rotation, links=self.links, connections=[i for i in self.connections], offset=self.c, init=False)
+    
+    
+    def translate(self, x:float, y:float):
+        self.moved += Vector(x, y)
+    
+    
+    def rotate(self, angle:float):
+        movement_ground = self.idisplacement + self.moved
+        self.links[3].translate(-movement_ground.x, -movement_ground.y)
+        self.links[3].rotate(angle)
+        for i in range(3):
+            self.links[i].rotate(angle)
+        self.links[3].translate(movement_ground.x, movement_ground.y)
+        self.rotation+=angle
+    
+    
+    def rotate_angle(self, angle:float):
+        self.rotate(angle_rad(angle))
+    
+    
+    def output_rad(self, input_rad:float, coupler_rotation:float):
+        """input_rad: crank angle relative to ground in rads
+           coupler_rotation: rotation of the coupler in rads
+           Returns a distance"""
+        d = self.a*cos(input_rad)-self.b*cos(coupler_rotation)
+        return d
+    
+    
+    def output_angle(self, input_angle, coupler_rotation):
+        """input_rad: crank angle relative to ground in degrees
+            coupler_rotation: rotation of the coupler in degrees
+            Returns a distance"""
+        d = self.output_rad(angle_rad(input_angle), angle_rad(coupler_rotation))
+        return d
+    
+    
+    def coupler_rad(self, input_rad:float):
+        """input_rad: crank angle relative to ground in rads
+        raise a ValueError if the crank can't be placed in that position"""
+        try:
+            solution_a = asin((self.a*sin(input_rad)-self.c)/self.b)
+            solution_b = asin(-(self.a*sin(input_rad)-self.c)/self.b)+pi
+        except ValueError:
+            raise ValueError("Crank can't be put in that position")
+        
+        return solution_a, solution_b
+    
+    
+    def coupler_angle(self, input_angle:float):
+        """input_angle: crank angle relative to ground in degrees
+        raise a ValueError if the crank can't be placed in that position"""
+        a, b = self.coupler_rad(angle_rad(input_angle))
+        return rad_angle(a), rad_angle(b)
+    
+    
+    def solution(self, angle_rad):
+        """Absolute position given an input angle for crank in radians
+           Return value might be: one solution repeated twice, two different solutions
+           or ValueError if this position is not possible"""
+        ca, cb = self.coupler_rad(angle_rad)
+        oa = self.output_rad(angle_rad, ca)
+        ob = self.output_rad(angle_rad, cb)
+        
+        crank = self.links[0].copy()
+        coupler = self.links[1].copy()
+        coupler2 = self.links[1].copy()
+        output = self.links[2].copy()
+        output2 = self.links[2].copy()
+        ground = self.links[3].copy()
+        
+        
+        crank.rotate(angle_rad)
+        coupler.rotate(ca)
+        coupler2.rotate(cb)
+        
+        crank.translate(self.origin.x, self.origin.y)
+        crank.translate(self.moved.x, self.moved.y)
+        ground.translate(self.moved.x, self.moved.y)
+        mv_coupler = crank.connections[self.connections[0][1]]-coupler.connections[self.connections[1][0]]
+        mv_coupler2 = crank.connections[self.connections[0][1]]-coupler2.connections[self.connections[1][0]]
+        coupler.translate(mv_coupler.x, mv_coupler.y)
+        coupler2.translate(mv_coupler2.x, mv_coupler2.y)
+        mv_out = coupler.connections[self.connections[0][1]]-output.connections[self.connections[0][0]]
+        mv_out2 = coupler2.connections[self.connections[0][1]]-output2.connections[self.connections[0][0]]
+        output.translate(mv_out.x, mv_out.y)
+        output2.translate(mv_out2.x, mv_out2.y)
+        
+        
+        return [crank, coupler, output, ground], [crank, coupler2, output2, ground]
+
 
 
 class Machine:
