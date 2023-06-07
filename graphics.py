@@ -157,7 +157,6 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-
 
 if __name__ == "__main__":
     #radii
-    """
     c1 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/20, (x/20)**2) for x in range(11)])
     c2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/20, (x/20-1)**2) for x in range(10, 21)])
     c3 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(1, 0)])
@@ -188,8 +187,12 @@ if __name__ == "__main__":
     mech3.translate(mech.links[3].connections[mech.connections[3][1]].x, mech.links[3].connections[mech.connections[3][1]].y)
     mech3.translate(2, 0)
     
-    machine = gm.Machine([mech, mech2, mech3])
-    """
+    machine = gm.Machine([mech, mech2, mech3], power_graph=[[1], [2], [3], []])
+    plot_rotation_mach(machine, frames=100, inversion=1)
+    del machine
+    
+    
+    
     
     #Piston Slider
     gg = gm.Curve(gm.Vector(0, 0), [gm.Vector(0,0,),])
@@ -222,8 +225,18 @@ if __name__ == "__main__":
     piston_2.rotate(5/6*gm.pi)
     piston_3.rotate(3/2*gm.pi)
     compresor = gm.Machine([piston_1, piston_2, piston_3], power_graph=[[1, 2, 3], [], [], []])
-    plot_rotation_mach(compresor, frames=100, inversion=1, lims=[[-16, 16], [-17, 12]])
+    plot_rotation_mach(compresor, frames=200, inversion=1, lims=[[-16, 16], [-17, 12]])
     
+    
+    half_circle_cc = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/10, (20.25-(x/10)**2)**0.5) for x in range(-45, 46)])
+    half_circle_cc2 = half_circle_cc.copy()
+    half_circle_cc.rotate(gm.pi/2)
+    half_circle_cc2.rotate(-gm.pi/2)
+    
+    circular_crank = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(4, 0)], [half_circle_cc, half_circle_cc2], 0)
+    slider_crank = gm.SliderCrank(gm.Vector(0, 0), 0.0, [circular_crank, coupler, slider, ground], ((0, 1), (0, 1), (0,), (0,)))
+    #machine_ = gm.Machine([slider_crank,], power_graph=[[1,], []])
+    #plot_rotation_mach(machine_, frames=100, inversion=1, lims=[[-17, 17], [-17, 17]])
     
     #12 pistones
     pistones = []
@@ -232,13 +245,10 @@ if __name__ == "__main__":
         p.rotate((i*1/6*gm.pi)+1/6*gm.pi)
         pistones.append(p)
     compresor = gm.Machine(pistones, power_graph=[[i+1 for i in range(12)], [], [], [], [], [], [], [], [], [], [], [], []])
-    plot_rotation_mach(compresor, frames=100, inversion=1, lims=[[-17, 17], [-17, 17]])
+    plot_rotation_mach(compresor, frames=200, inversion=1, lims=[[-17, 17], [-17, 17]])
     
     #plot_rotation_mech(piston_1, frames=100, inversion=1)
     
-    
-    #machine_ = gm.Machine([slider_crank,])
-    #plot_rotation_mach(machine_, frames=100, inversion=1)
     
     #plot_link(mech.links[1])
     #plot_link(mech.solution(0*gm.pi)[1][1])
@@ -249,7 +259,6 @@ if __name__ == "__main__":
     #plot_machine(machine.solution(0.2*gm.pi, pattern=1))
     #plot_machine(machine.solution(0.2*gm.pi, pattern=1))
     #plot_rotation_mech(mech, frames=100, inversion=1)
-    #plot_rotation_mach(machine, frames=100, power_graph=[[1], [2], [3], []], input_graph=[0, 0, 1, 2], inversion=1)
 
 
 

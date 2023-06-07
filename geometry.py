@@ -148,12 +148,13 @@ class Link:
 
 
 class Mechanism:
-    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], init=True):
+    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], init=True, name=""):
         """Representation of 4 bar mechanism, must be ordered as follows: a (crank), b (coupler), c (output), d (bench/ground)
            connections: numbers indicating the connection points from the links to use"""
         assert len(connections) == len(links), "Missmatch between connections and links"
         assert len(links) == 4, "Can only solve for 4 bar mechanism"
         
+        self.name = name
         self.origin = origin
         self.links = [l.copy() for l in links]
         self.connections = connections
@@ -204,7 +205,7 @@ class Mechanism:
     
     
     def copy(self):
-        return Mechanism(self.origin.copy(), self.rotation, links=self.links, connections=[i for i in self.connections], init=False)
+        return Mechanism(self.origin.copy(), self.rotation, links=self.links, connections=[i for i in self.connections], init=False, name=self.name)
     
     
     
@@ -307,12 +308,13 @@ class Mechanism:
 
 
 class SliderCrank:
-    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], offset:float=0, init=True):
+    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], offset:float=0, init=True, name=""):
         """Representation of 4 bar mechanism, must be ordered as follows: a (crank), b (coupler), c (output), d (bench/ground)
            connections: numbers indicating the connection points from the links to use"""
         assert len(connections) == len(links), "Missmatch between connections and links"
         assert len(links) == 4, "Can only solve for 4 bar mechanism"
         
+        self.name = name
         self.origin = origin
         self.links = [l.copy() for l in links]
         self.connections = connections
@@ -359,7 +361,7 @@ class SliderCrank:
     
     
     def copy(self):
-        return SliderCrank(self.origin.copy(), self.rotation, links=self.links, connections=[i for i in self.connections], offset=self.c, init=False)
+        return SliderCrank(self.origin.copy(), self.rotation, links=self.links, connections=[i for i in self.connections], offset=self.c, init=False, name=self.name)
     
     
     def translate(self, x:float, y:float):
@@ -457,7 +459,7 @@ class Machine:
         """A machine is defined here as one or more 4-bar mechanisms connected
            - First Mechanism must be the input mechanism
            - power_graph: indicates what a mechanim powers. It is a list of lists where list 0 represents the input crank from the first mechanism
-             so mechanism '0' is represented in list '1'. Example: [[1, 3], [], [], [2]] in this example the input crank powers mechanim 1 and 3 and mechanim 3 powers mechanim 2
+             so mechanism '0' is represented in list as '1'. Example: [[1, 3], [], [], [2]] in this example the input crank powers mechanim 1 and 3 and mechanim 3 powers mechanim 2
              if a mechanism doesn't power anything place an empty list. Bear in mind mechanism 2 will only be powered by the output of mechanism 3.
            - Important to consider that a mechanism cannot be powered be more than one output, if this happens only the last one will be taken as power
         """
