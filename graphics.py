@@ -5,6 +5,7 @@ import geometry as gm
 from time import sleep
 from typing import List
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 from matplotlib.animation import FuncAnimation
 
 
@@ -26,10 +27,14 @@ def plot_link(link:gm.Link):
 
 
 
-def plot_mechanism(crank:gm.Link, coupler:gm.Link, output:gm.Link, ground:gm.Link):
+def plot_mechanism(crank:gm.Link, coupler:gm.Link, output:gm.Link, ground:gm.Link, axes:Axes=None):
     links = [crank, coupler, output, ground]
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
+    
+    if axes:
+        ax = axes
+    else:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
     
     
     for link in links:
@@ -44,7 +49,8 @@ def plot_mechanism(crank:gm.Link, coupler:gm.Link, output:gm.Link, ground:gm.Lin
     ax.set_xlim([minimun, maximum])
     ax.set_ylim([minimun, maximum])
     
-    plt.show()
+    if not axes:
+        plt.show()
 
 
 def plot_machine(mechanisms:List[List[gm.Link]]):
@@ -188,7 +194,7 @@ if __name__ == "__main__":
     mech3.translate(2, 0)
     
     machine = gm.Machine([mech, mech2, mech3], power_graph=[[1], [2], [3], []])
-    plot_rotation_mach(machine, frames=100, inversion=1)
+    #plot_rotation_mach(machine, frames=100, inversion=1)
     del machine
     
     
@@ -225,7 +231,7 @@ if __name__ == "__main__":
     piston_2.rotate(5/6*gm.pi)
     piston_3.rotate(3/2*gm.pi)
     compresor = gm.Machine([piston_1, piston_2, piston_3], power_graph=[[1, 2, 3], [], [], []])
-    plot_rotation_mach(compresor, frames=200, inversion=1, lims=[[-16, 16], [-17, 12]])
+    #plot_rotation_mach(compresor, frames=200, inversion=1, lims=[[-16, 16], [-17, 12]])
     
     
     half_circle_cc = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/10, (20.25-(x/10)**2)**0.5) for x in range(-45, 46)])
@@ -245,7 +251,7 @@ if __name__ == "__main__":
         p.rotate((i*1/6*gm.pi)+1/6*gm.pi)
         pistones.append(p)
     compresor = gm.Machine(pistones, power_graph=[[i+1 for i in range(12)], [], [], [], [], [], [], [], [], [], [], [], []])
-    plot_rotation_mach(compresor, frames=200, inversion=1, lims=[[-17, 17], [-17, 17]])
+    #plot_rotation_mach(compresor, frames=200, inversion=1, lims=[[-17, 17], [-17, 17]])
     
     #plot_rotation_mech(piston_1, frames=100, inversion=1)
     
@@ -253,7 +259,7 @@ if __name__ == "__main__":
     #plot_link(mech.links[1])
     #plot_link(mech.solution(0*gm.pi)[1][1])
     #plot_link(mech.solution(0*gm.pi)[1][0])
-    #plot_mechanism(*mech2.solution(0.2*gm.pi)[1])
+    plot_mechanism(*mech2.solution(0.2*gm.pi)[1])
     #plot_mechanism(*mech3.solution(0.2*gm.pi)[1])
     #plot_mechanism(*mech.solution(0.2*gm.pi)[1])
     #plot_machine(machine.solution(0.2*gm.pi, pattern=1))

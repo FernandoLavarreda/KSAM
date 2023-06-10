@@ -11,7 +11,7 @@ import tkinter.ttk as ttk
 from display import Graphics
 import tkinter.filedialog as fd
 import tkinter.messagebox as msg
-from math import sin, cos, tan
+from math import sin, cos, tan, pi
 
 
 
@@ -243,7 +243,7 @@ class UILink(ttk.Frame):
         ttk.Button(self.controls, text="save", command=self.save).grid(row=2, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
         ttk.Button(self.controls, text="new", command=self.new).grid(row=1, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
         ttk.Button(self.controls, text="delete", command=self.delete).grid(row=3, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
-        self.select = ttk.Combobox(self.controls, state="readonly")
+        self.select = ttk.Combobox(self.controls, state="readonly", values=[i.name for i in links])
         self.select.bind("<<ComboboxSelected>>", self.selection)
         self.select_connection.bind("<<ComboboxSelected>>", self.select_conn)
         self.select.grid(row=0, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
@@ -299,9 +299,11 @@ class UILink(ttk.Frame):
     def remove_curve(self):
         if self.select_remove_curve.current()!=-1:
             self.temp.curves.pop(self.select_remove_curve.current())
-            new_list = list(self.select_remove_curve.current["values"]).pop(self.select_remove_curve.current())
-            self.select_remove_curve.current["values"] = tuple(new_list)
+            new_list = list(self.select_remove_curve["values"])
+            new_list.pop(self.select_remove_curve.current())
+            self.select_remove_curve["values"] = tuple(new_list)
             self.select_remove_curve.set('')
+            self.load_link(self.temp)
     
     
     def save(self):
@@ -367,7 +369,7 @@ class UILink(ttk.Frame):
         self.graphics.clear()
         self.sname.set(link.name)
         self.sthickness.set(str(round(link.thickness, 6)))
-        self.select_remove_curve["values"] = (c.name for c in link.curves)
+        self.select_remove_curve["values"] = [c.name for c in link.curves]
         self.select_remove_curve.set('')
         self.select_connection["values"] = [str(i+1) for i in range(len(link.connections))]
         self.select_connection.set('')
@@ -392,6 +394,7 @@ class UIMechanism(ttk.Frame):
         self.slider = tk.StringVar(self)
         self.soffset = tk.StringVar(self)
         self.srotation = tk.StringVar(self)
+        self.sinput = tk.StringVar(self)
         self.crank = None
         self.coupler = None
         self.output = None
@@ -417,7 +420,7 @@ class UIMechanism(ttk.Frame):
         self.coupler = ttk.Combobox(self.controls, values=link_names, state="readonly")
         self.output = ttk.Combobox(self.controls, values=link_names, state="readonly")
         self.ground = ttk.Combobox(self.controls, values=link_names, state="readonly")
-        self.offset_entry = ttk.Entry(self.controls, textvariable=self.sname)
+        self.offset_entry = ttk.Entry(self.controls, textvariable=self.soffset)
         
         self.connections = [ttk.Combobox(self.controls, state="readonly") for i in range(8)]
         for i, con in enumerate(self.connections):
@@ -428,7 +431,7 @@ class UIMechanism(ttk.Frame):
         ttk.Button(self.controls, text="new", command=self.new).grid(row=3, column=5, sticky=tk.SE+tk.NW, columnspan=2, padx=(0, 0))
         ttk.Button(self.controls, text="save", command=self.save).grid(row=4, column=5, sticky=tk.SE+tk.NW, columnspan=2, padx=(0, 0))
         ttk.Button(self.controls, text="delete", command=self.delete).grid(row=5, column=5, sticky=tk.SE+tk.NW, columnspan=2, padx=(0, 0))
-        self.select = ttk.Combobox(self.controls, state="readonly")
+        self.select = ttk.Combobox(self.controls, state="readonly", values=[i.name for i in mechanisms])
         self.select.bind("<<ComboboxSelected>>", self.selection)
         self.crank.bind("<<ComboboxSelected>>", self.selection)
         self.coupler.bind("<<ComboboxSelected>>", self.selection)
@@ -447,19 +450,80 @@ class UIMechanism(ttk.Frame):
     def save(self):
         if self.cursor != -1:
             try:
-                n = float(self.sthickness.get())
-                if n<=0:
+                name = self.sname.get()
+                specific_msg = "Check rotation"
+                rotation = float(self.srotation.get())*pi/180
+                crank = self.crank.current()
+                coupler = self.coupler.current()
+                output = self.output.current()
+                crank_connections = [self.connections[0].current(), self.connections[1].current()]
+                coupler_connections = [self.connections[2].current(), self.connections[3].current()]
+                output_connections = [self.connections[4].current(),]
+                if coupler == -1 or crank == -1 or output == -1:
+                    specific_msg="Crank, Coupler or Output not selected"
                     raise ValueError("")
+                
+                if -1 in crank_connections:
+                    specific_msg="Missing one or more connections for crank"
+                    raise ValueError("")
+                if crank_connections[0] == crank_connections[1]:
+                    specific_msg="Cannot repeat crank connection"
+                    raise ValueError("")
+                
+                if -1 in coupler_connections:
+                    specific_msg="Missing one or more connections for coupler"
+                    raise ValueError("")
+                if coupler_connections[0] == coupler_connections[1]:
+                    specific_msg="Cannot repeat coupler connection"
+                    raise ValueError("")
+                
+                if -1 in output_connections:
+                        specific_msg="Missing one or more connections for output"
+                        raise ValueError("")
+                
+                
+                
+                if self.slider == "Ground:":
+                    ground = self.ground.current()
+                    ground_connections = [self.connections[6].current(), self.connections[7].current]
+                    output_connections.append(self.connections[5].current())
+                    
+                    
+                    if -1 in output_connections:
+                        specific_msg="Missing one or more connections for output"
+                        raise ValueError("")
+                    
+                    if output_connections[0] == output_connections[1]:
+                        specific_msg="Missing one or more connections for crank"
+                        raise ValueError("")
+                    
+                    if ground == -1:
+                        specific_msg="Ground not selected"
+                        raise ValueError("")
+                    if -1 in ground_connections:
+                        specific_msg="Missing one or more connections for ground"
+                        raise ValueError("")
+                    
+                else:
+                    specific_msg="Offset not a number"
+                    offset = float(self.soffset.get())
+                
             except Exception:
-                msg.showerror(parent=self, title="Error", message="Thickness must be set to a number>0")
+                msg.showerror(parent=self, title="Error", message="Invalid parameters\n"+specific_msg)
             else:
-                self.temp.name = self.sname.get()
-                self.temp.thickness = float(self.sthickness.get())
+                if self.slider == "Ground:":
+                    self.temp = Mechanism(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy(), self.links[ground].copy()],\
+                              connections=[crank_connections, coupler_connections, output_connections, ground_connections], name=name)
+                else:
+                    self.temp = SliderCrank(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy()],\
+                                connections=[crank_connections, coupler_connections, output_connections], offset=offset, name=name)
+                
                 list_options = list(self.select["values"])
                 list_options[self.cursor] = self.temp.name
                 self.select["values"] = tuple(list_options)
                 self.links[self.cursor] = self.temp.copy()
                 self.select.set(self.select["values"][self.cursor])
+                self.load_mechanism(self.temp)
     
     
     def new(self):
@@ -473,18 +537,17 @@ class UIMechanism(ttk.Frame):
                 pass
         name = "new "+str(biggest)
         
-        nlink = Link(Vector(0, 0), [], [], 0.1, name)
-        self.temp = nlink
-        self.load_link(self.temp)
-        self.links.append(nlink)
+        self.temp = None
+        self.load_mechanism(self.temp)
+        self.mechanisms.append(self.temp)
         self.cursor = len(self.links)-1
         self.select["values"] = (*self.select["values"], name)
         self.select.set(name)
     
     
     def delete(self):
-        if self.cursor != -1:
-            self.mechanisms.pop(self.cursor)
+        if self.select.current() != -1:
+            self.mechanisms.pop(self.select.current())
             counter = 0
             options = []
             for v in self.select["values"]:
@@ -493,21 +556,23 @@ class UIMechanism(ttk.Frame):
                 counter+=1
             self.select["values"] = options
             self.select.set('')
-            self.load_mechanism(Link(Vector(0, 0), (), (), 0))
+            self.temp = None
+            self.load_mechanism(self.temp)
             self.cursor = -1
     
     
     def selection(self, comp):
+        if comp.widget == self.select:
+            self.load_mechanism(self.mechanisms[self.select.current()])
+            return
         try:
             available = [self.crank, self.coupler, self.ground]
             i = available.index(comp.widget)
             self.connections[i*2]['values'] = [f'x:{v.x} y:{v.y}' for v in self.links[available[i].current()].connections]
             self.connections[i*2+1]['values'] = [f'x:{v.x} y:{v.y}' for v in self.links[available[i].current()].connections]
         except ValueError:
-            #Selection of mechanism
+            #Selection of mechanism, shouldn't happen
             pass
-        
-            
     
     
     def change_type(self):
@@ -515,16 +580,78 @@ class UIMechanism(ttk.Frame):
             self.ground.grid_forget()
             self.connections[-1]['state'] = 'disabled'
             self.connections[-2]['state'] = 'disabled'
+            self.connections[5]['state'] = 'disabled'
             self.offset_entry.grid(row=5, column=1, sticky=tk.SE+tk.NW)
         else:
             self.offset_entry.grid_forget()
             self.connections[-1]['state'] = 'readonly'
             self.connections[-2]['state'] = 'readonly'
+            self.connections[5]['state'] = 'readonly'
             self.ground.grid(row=5, column=1, sticky=tk.SE+tk.NW)
     
     
-    def load_mechanism(self, mechanism:Mechanism|SliderCrank):
-        pass
+    def load_mechanism(self, mechanism:Mechanism|SliderCrank, angle_rad:float=0, inversion:int=1):
+        self.graphics.clear()
+        if mechanism == None:
+            return
+        
+        self.sname.set(mechanism.name)
+        self.srotation(str(round(mechanism.rotation, 2)))
+        self.crank.set(mechanism.links[0].name)
+        self.coupler.set(mechanism.links[1].name)
+        self.output.set(mechanism.links[2].name)
+        
+        self.connections[0]['values'] = [f'x:{v.x} y:{v.y}' for v in mechanism.links[0].connections]
+        self.connections[1]['values'] = [f'x:{v.x} y:{v.y}' for v in mechanism.links[1].connections]
+        self.connections[2]['values'] = [f'x:{v.x} y:{v.y}' for v in mechanism.links[2].connections]
+        
+        self.connections[0].current(mechanism.connections[0][0])
+        self.connections[1].current(mechanism.connections[0][1])
+        
+        self.connections[2].current(mechanism.connections[1][0])
+        self.connections[3].current(mechanism.connections[1][1])
+        
+        self.connections[4].current(mechanism.connections[2][0])
+        
+        
+        if self.crank.current() == -1:
+            msg.showwarning("Warning", message="Crank link has been deleted or its name has changed if new changes are going to be saved to the mechanism check for the correct link")
+        if self.coupler.current() == -1:
+            msg.showwarning("Warning", message="Coupler link has been deleted or its name has changed if new changes are going to be saved to the mechanism check for the correct link")
+        if self.output.current() == -1:
+            msg.showwarning("Warning", message="Output link has been deleted or its name has changed if new changes are going to be saved to the mechanism check for the correct link")
+        
+        
+        if type(mechanism) == Mechanism:
+            self.slider.set("Ground:")
+            self.ground.set(mechanism.links[3].name)
+            
+            self.connections[5].current(mechanism.connections[2][1])
+            self.connections[6].current(mechanism.connections[3][0])
+            self.connections[7].current(mechanism.connections[3][1])
+            
+            if self.ground.current() == -1:
+                msg.showwarning("Warning", message="Ground link has been deleted or its name has changed if new changes are going to be saved to the mechanism check for the correct link")
+            
+            self.connections[3]['values'] = [f'x:{v.x} y:{v.y}' for v in mechanism.links[3].connections]
+        
+        elif type(mechanism) == SliderCrank:
+            self.sname.set(mechanism.name)
+            self.slider.set("Offset:")
+            self.soffset.set(mechanism.c)
+            
+            if self.crank.current() == -1:
+                msg.showwarning("Warning", message="Crank link has been deleted or its name has changed if new changes are going to be saved to the mechanism check for the correct link")
+            if self.coupler.current() == -1:
+                msg.showwarning("Warning", message="Coupler link has been deleted or its name has changed if new changes are going to be saved to the mechanism check for the correct link")
+            if self.output.current() == -1:
+                msg.showwarning("Warning", message="Output link has been deleted or its name has changed if new changes are going to be saved to the mechanism check for the correct link")
+        
+        solution = mechanism.solution(angle_rad)[inversion]
+        
+            
+            
+            
         
 
 
@@ -537,10 +664,6 @@ if __name__ == "__main__":
     nn = UIMechanism(wd, [Link(Vector(0, 0), (), (), 0, name="KK"),], [])
     nn.grid(row=0, column=0)
     wd.mainloop()
-
-
-
-
 
 
 

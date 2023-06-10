@@ -310,9 +310,10 @@ class Mechanism:
 class SliderCrank:
     def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], offset:float=0, init=True, name=""):
         """Representation of 4 bar mechanism, must be ordered as follows: a (crank), b (coupler), c (output), d (bench/ground)
+           Ground is an optional addition to the links
            connections: numbers indicating the connection points from the links to use"""
         assert len(connections) == len(links), "Missmatch between connections and links"
-        assert len(links) == 4, "Can only solve for 4 bar mechanism"
+        assert len(links) == 3 or len(links) == 4, "Can only solve for 4 bar mechanism, ground link is optional"
         
         self.name = name
         self.origin = origin
@@ -325,6 +326,12 @@ class SliderCrank:
         self.c = offset
         self.size = (self.a+self.b)*1.1
         
+        
+        #Ground optional
+        if len(links) == 3:
+            gg = Curve(gm.Vector(0, 0), [gm.Vector(0,0,),])
+            self.links.append(Link(gm.Vector(0, 0), [gm.Vector(0, 0)], [gg,], 0.0))
+            self.connections.append([0,])
         
         if rotation > 2*pi:
             self.rotation = angle_rad(rotation)
