@@ -6,6 +6,7 @@ from time import sleep
 from typing import List
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
 
 
@@ -66,9 +67,13 @@ def plot_machine(mechanisms:List[List[gm.Link]]):
     plt.show()
 
 
-def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colors=["red", "purple", "green", "orange", "blue", "black", "yellow"]):
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
+def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colors=["red", "purple", "green", "orange", "blue", "black", "yellow"], axes:Axes=None, fig:Figure=None):
+    assert (axes == None and fig == None) or (axes != None and fig != None), "Assign both axes and figure or none"
+    if axes:
+        ax = axes
+    else:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
     s1 = mechanism.solution(0)[inversion]
     
     ax.set_xlim([-mechanism.size+mechanism.location().x, mechanism.size+mechanism.location().x])
@@ -81,6 +86,7 @@ def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colo
         for curve in link.curves:
             lines[-1].append(*ax.plot([vector.x for vector in curve.vectors], [vector.y for vector in curve.vectors], color=colors[color%len(colors)]))
         color+=1
+    
     def animate(i):
         radian = 2*gm.pi*i/frames
         solution = mechanism.solution(radian)[inversion]
@@ -96,8 +102,11 @@ def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colo
         return ret
     
     anim = FuncAnimation(fig, animate, frames=frames, interval=20, blit=True)
-    #anim.save("advances.gif")
-    plt.show()
+    
+    if not axes:
+        plt.show()
+    else:
+        return anim
 
 
 def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-1.5, 7], [-2.5, 4]], colors=["red", "purple", "green", "orange", "blue", "black", "yellow"]):
