@@ -153,7 +153,6 @@ class Mechanism:
            connections: numbers indicating the connection points from the links to use"""
         assert len(connections) == len(links), "Missmatch between connections and links"
         assert len(links) == 4, "Can only solve for 4 bar mechanism"
-        
         self.name = name
         self.origin = origin
         self.links = [l.copy() for l in links]
