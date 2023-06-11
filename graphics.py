@@ -54,9 +54,12 @@ def plot_mechanism(crank:gm.Link, coupler:gm.Link, output:gm.Link, ground:gm.Lin
         plt.show()
 
 
-def plot_machine(mechanisms:List[List[gm.Link]]):
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
+def plot_machine(mechanisms:List[List[gm.Link]], axes:Axes=None):
+    if axes:
+        ax = axes
+    else:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
     
     for mechanism in mechanisms:
         for link in mechanism:
@@ -64,7 +67,9 @@ def plot_machine(mechanisms:List[List[gm.Link]]):
                 ax.plot([vector.x for vector in curve.vectors], [vector.y for vector in curve.vectors])
     miny, maxy = ax.get_ylim()
     minx, maxx = ax.get_xlim()
-    plt.show()
+    
+    if not axes:
+        plt.show()
 
 
 def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colors=["red", "purple", "green", "orange", "blue", "black", "yellow"], axes:Axes=None, fig:Figure=None):
@@ -109,20 +114,22 @@ def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colo
         return anim
 
 
-def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-1.5, 7], [-2.5, 4]], colors=["red", "purple", "green", "orange", "blue", "black", "yellow"]):
+def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-1.5, 7], [-2.5, 4]], colors=["red", "purple", "green", "orange", "blue", "black", "yellow"], axes:Axes=None, fig:Figure=None):
     """
     Inversion can be either 0 for 0s list a 1 for 1s list or a list indicating the inversion for each mechanism
     """
-    
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
+    assert (axes == None and fig == None) or (axes != None and fig != None), "Assign both axes and figure or none"
+    if axes:
+        ax = axes
+    else:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
     
     starter_sol = machine.solution(0, inversion)
     
     ax.set_xlim(lims[0])
     ax.set_ylim(lims[1])
     
-    #plot_machine(starter_sol)
     
     #Important to skip crank for all mechanisms except input one
     lines = []
@@ -165,7 +172,10 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-
     
     anim = FuncAnimation(fig, animate, frames=frames, interval=20, blit=True)
     #anim.save("examples/simple_compresor.gif")
-    plt.show()
+    if not axes:
+        plt.show()
+    else:
+        return anim
 
 
 
