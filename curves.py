@@ -19,7 +19,7 @@ class UICurve(ttk.Frame):
     def __init__(self, master, curves:List[Curve]):
         super().__init__(master)
         self.curves = curves
-        self.graphics = Graphics(self, (8, 6), row=0, column=0, columnspan=1, rowspan=10, dpi=100, title="")
+        self.graphics = Graphics(self, (9.6, 6), row=0, column=0, columnspan=1, rowspan=10, dpi=100, title="")
         self.cursor = -1
         self.temp = None
         #------------Control of Curve Properties------------------
@@ -205,7 +205,7 @@ class UILink(ttk.Frame):
         super().__init__(master)
         self.curves = curves
         self.links = links
-        self.graphics = Graphics(self, (8, 6), row=0, column=0, columnspan=1, rowspan=10, dpi=100, title="")
+        self.graphics = Graphics(self, (9.6, 6), row=0, column=0, columnspan=1, rowspan=10, dpi=100, title="")
         self.cursor = -1
         self.temp = None
         #-----------Controls------------
@@ -385,7 +385,7 @@ class UIMechanism(ttk.Frame):
         super().__init__(master)
         self.links = links
         self.mechanisms = mechanisms
-        self.graphics = Graphics(self, (8, 6), row=0, column=0, columnspan=1, rowspan=10, dpi=100, title="")
+        self.graphics = Graphics(self, (9.6, 6), row=0, column=0, columnspan=1, rowspan=10, dpi=100, title="")
         self.cursor = -1
         self.temp = None
         #Variables
@@ -696,7 +696,7 @@ class UIMachine(ttk.Frame):
         super().__init__(master)
         self.mechanisms = mechanisms
         self.machines = machines
-        self.graphics = Graphics(self, (8, 6), row=0, column=0, columnspan=1, rowspan=10, dpi=100, title="")
+        self.graphics = Graphics(self, (9.6, 6), row=0, column=0, columnspan=1, rowspan=10, dpi=100, title="")
         self.temp = None
         self.temp_mechanisms = []
         #Variables
