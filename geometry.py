@@ -101,9 +101,9 @@ class Curve:
 
 class Link:
     def __init__(self, origin:Vector, connections:List[Vector], curves:List[Curve], thickness:float, name=""):
-        """A link is a segment of a mechanim for which the position and stress are desired
+        """A link is a segment of a mechanism for which the position and stress are desired
            origin: Absolute position where the start of the Link is located
-           connections: Vectors where another link may be connected to create a mechanim"""
+           connections: Vectors where another link may be connected to create a mechanism"""
         self.origin = origin
         self.connections = connections
         self.curves = curves
@@ -204,8 +204,9 @@ class Mechanism:
     
     
     def copy(self):
-        return Mechanism(self.origin.copy(), self.rotation, links=self.links, connections=[i for i in self.connections], init=False, name=self.name)
-    
+        mechanism = Mechanism(self.origin.copy(), self.rotation, links=self.links, connections=[i for i in self.connections], init=False, name=self.name)
+        mechanism.translate(self.moved.x, self.moved.y)
+        return mechanism
     
     
     def translate(self, x:float, y:float):
@@ -367,7 +368,9 @@ class SliderCrank:
     
     
     def copy(self):
-        return SliderCrank(self.origin.copy(), self.rotation, links=self.links, connections=[i for i in self.connections], offset=self.c, init=False, name=self.name)
+        slider_crank = SliderCrank(self.origin.copy(), self.rotation, links=self.links, connections=[i for i in self.connections], offset=self.c, init=False, name=self.name)
+        slider_crank.translate(self.moved.x, self.moved.y)
+        return slider_crank
     
     
     def translate(self, x:float, y:float):
@@ -461,14 +464,18 @@ class SliderCrank:
 
 
 class Machine:
-    def __init__(self, mechanisms:List[Mechanism], power_graph:List[List[int]]):
+    def __init__(self, mechanisms:List[Mechanism], power_graph:List[List[int]], name=""):
         """A machine is defined here as one or more 4-bar mechanisms connected
            - First Mechanism must be the input mechanism
-           - power_graph: indicates what a mechanim powers. It is a list of lists where list 0 represents the input crank from the first mechanism
-             so mechanism '0' is represented in list as '1'. Example: [[1, 3], [], [], [2]] in this example the input crank powers mechanim 1 and 3 and mechanim 3 powers mechanim 2
+           - power_graph: indicates what a mechanism powers. It is a list of lists where list 0 represents the input crank from the first mechanism
+             so mechanism '0' is represented in list as '1'. Example: [[1, 3], [], [], [2]] in this example the input crank powers mechanism 1 and 3 and mechanism 3 powers mechanism 2
              if a mechanism doesn't power anything place an empty list. Bear in mind mechanism 2 will only be powered by the output of mechanism 3.
-           - Important to consider that a mechanism cannot be powered be more than one output, if this happens only the last one will be taken as power
+           - Important to consider that a mechanism cannot be powered by more than one output, if this happens only the last one will be taken as power
+           - SliderCrank cannot power any mechanism
         """
+        assert all([type(mechanisms[i]) != SliderCrank or len(power_graph[i+1]) == 0 for i in range(len(mechanisms))]), "Slider cannot power another mechanism"
+        
+        self.name = name
         self.mechanisms = mechanisms
         self.power_graph = power_graph
         self.input_graph = [-1 for i in range(len(power_graph))]
@@ -477,6 +484,10 @@ class Machine:
                 self.input_graph[receiver] = power
         if -1 in self.input_graph[1:]:
             raise ValueError("One or more mechanisms are not powered")
+    
+    
+    def copy(self):
+        return Machine(mechanisms=[m.copy() for m in self.mechanisms], power_graph=self.power_graph, name=self.name)
     
     
     def solution(self, angle_rad, pattern:list=0)->List[List[Link]]:
@@ -525,8 +536,6 @@ if __name__ == "__main__":
     a.rotate_angle(180)
     print(a+b)
     print(topological_sort([[1, 2, 3], [4], [5], [], [], []]))
-
-
 
 
 
