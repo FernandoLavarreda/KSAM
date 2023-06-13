@@ -905,7 +905,17 @@ class UIMachine(ttk.Frame):
                 msg.showerror(parent=self, title="Error", message=str(e))
             else:
                 if animate_:
-                    animation = graphics.plot_rotation_mach(machine, frames=100, inversion=inversions, axes=self.graphics.axis, fig=self.graphics.fig)
+                    self.load_machine(machine)
+                    xlims = [abs(x) for x in list(self.graphics.axis.get_xlim())]
+                    ylims = [abs(y) for y in list(self.graphics.axis.get_ylim())]
+                    biggest = max(ylims+xlims)
+                    xlims[0] = biggest*-1
+                    xlims[1] = biggest
+                    ylims[0] = biggest*-1
+                    ylims[1] = biggest
+                    self.graphics.clear()
+                    self.graphics.render()
+                    animation = graphics.plot_rotation_mach(machine, frames=100, lims=[xlims, ylims], inversion=inversions, axes=self.graphics.axis, fig=self.graphics.fig)
                 else:
                     solution = machine.solution(self.angle_rotate.get()*pi/180, inversions)
                     graphics.plot_machine(solution, self.graphics.axis)
@@ -931,7 +941,7 @@ class UIMachine(ttk.Frame):
 if __name__ == "__main__":
     import examples
     wd = tk.Tk()
-    mac = examples.build_machine()
+    mac = examples.build_compresor(12)
     
     c1 = Curve(Vector(0, 0), [Vector(x/20, (x/20)**2) for x in range(11)])
     c2 = Curve(Vector(0, 0), [Vector(x/20, (x/20-1)**2) for x in range(10, 21)])
