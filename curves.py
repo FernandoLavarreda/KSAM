@@ -62,7 +62,7 @@ class UICurve(ttk.Frame):
         self.select.grid(row=0, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
         self.functions.bind("<Return>", self.func)
         if self.curves:
-            self.select["values"] = (c.name for c in curves)
+            self.select["values"] = [c.name for c in curves]
         #------------------------------
     
     
@@ -845,10 +845,10 @@ class UIMachine(ttk.Frame):
         name = "new "+str(biggest)
         
         self.temp = None
-        self.machine.append(self.temp)
+        self.machines.append(self.temp)
         self.select["values"] = (*self.select["values"], name)
         self.select.set(name)
-        self.load_machine(temp)
+        self.load_machine(self.temp)
         self.temp_mechanisms = []
     
     
@@ -909,10 +909,10 @@ class UIMachine(ttk.Frame):
                     xlims = [abs(x) for x in list(self.graphics.axis.get_xlim())]
                     ylims = [abs(y) for y in list(self.graphics.axis.get_ylim())]
                     biggest = max(ylims+xlims)
-                    xlims[0] = biggest*-1
-                    xlims[1] = biggest
-                    ylims[0] = biggest*-1
-                    ylims[1] = biggest
+                    xlims[0] = biggest*-1.15
+                    xlims[1] = biggest*1.15
+                    ylims[0] = biggest*-1.15
+                    ylims[1] = biggest*1.15
                     self.graphics.clear()
                     self.graphics.render()
                     animation = graphics.plot_rotation_mach(machine, frames=100, lims=[xlims, ylims], inversion=inversions, axes=self.graphics.axis, fig=self.graphics.fig)
@@ -938,9 +938,40 @@ class UIMachine(ttk.Frame):
 
 
 
+class GUI(tk.Tk):
+    def __init__(self, curves:List[Curve]=[], links:List[Link]=[], mechanisms:List[Mechanism|SliderCrank]=[], machines:List[Machine]=[]):
+        super().__init__()
+        self.notebook = ttk.Notebook(self)
+        self.curves = curves
+        self.links = links
+        self.mechanisms = mechanisms
+        self.machines = machines
+        
+        self.pages = {
+            "Curves": UICurve(self.notebook, self.curves),
+            "Links":  UILink(self.notebook, self.curves, self.links),
+            "Mechanisms": UIMechanism(self.notebook, self.links, self.mechanisms),
+            "Machines": UIMachine(self.notebook, self.mechanisms, self.machines)
+        }
+        
+        for key, value in self.pages.items():
+            self.notebook.add(value, text=key, underline=0, sticky=tk.NE + tk.SW)
+        
+        self.notebook.bind("<<NotebookTabChanged>>", self.change_page)
+        self.notebook.enable_traversal()
+        self.notebook.pack()
+    
+    
+    def change_page(self, *args):
+        self.pages["Links"].curves_available()
+        self.pages["Mechanisms"].links_available()
+        self.pages["Machines"].mechanisms_available()
+
+
+
 if __name__ == "__main__":
     import examples
-    wd = tk.Tk()
+    #wd = tk.Tk()
     mac = examples.build_compresor(12)
     
     c1 = Curve(Vector(0, 0), [Vector(x/20, (x/20)**2) for x in range(11)])
@@ -964,9 +995,12 @@ if __name__ == "__main__":
     #nn = UICurve(wd, [])
     #nn = UILink(wd, [], [])
     #nn = UIMechanism(wd, [link, link2, link3, link4], [mech,])
-    nn = UIMachine(wd, [mech,], [mac,])
-    nn.grid(row=0, column=0)
-    wd.mainloop()
+    #nn = UIMachine(wd, [mech,], [mac,])
+    #nn.grid(row=0, column=0)
+    #wd.mainloop()
+    gui = GUI(mechanisms=[mech,], machines=[mac,])
+    gui.mainloop()
+    
 
 
 
