@@ -83,3 +83,7 @@ def build_compresor(pistons:int):
     return compresor
 
 
+if __name__ == "__main__":
+    cm = build_compresor(3)
+    print(cm.angular_velocity(0, gm.pi/2, 1))
+

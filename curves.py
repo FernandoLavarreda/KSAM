@@ -289,20 +289,30 @@ class UILink(ttk.Frame):
     
     def add_curve(self):
         if self.select_add_curve.current() != -1:
-           self.temp.curves.append(self.curves[self.select_add_curve.current()].copy())
-           self.select_remove_curve["values"] = (*self.select_remove_curve["values"], self.curves[self.select_add_curve.current()].name)
-           self.select_add_curve.set('')
-           self.load_link(self.temp)
+            if self.temp:
+               self.temp.curves.append(self.curves[self.select_add_curve.current()].copy())
+               self.select_remove_curve["values"] = (*self.select_remove_curve["values"], self.curves[self.select_add_curve.current()].name)
+               self.select_add_curve.set('')
+               name = self.sname.get()
+               self.load_link(self.temp)
+               self.sname.set(name)
+            else:
+                msg.showerror(parent=self, title="Error", message="No link in workspace, create a new one or load an existing link")
     
     
     def remove_curve(self):
         if self.select_remove_curve.current()!=-1:
-            self.temp.curves.pop(self.select_remove_curve.current())
-            new_list = list(self.select_remove_curve["values"])
-            new_list.pop(self.select_remove_curve.current())
-            self.select_remove_curve["values"] = tuple(new_list)
-            self.select_remove_curve.set('')
-            self.load_link(self.temp)
+            if self.temp:
+                self.temp.curves.pop(self.select_remove_curve.current())
+                new_list = list(self.select_remove_curve["values"])
+                new_list.pop(self.select_remove_curve.current())
+                self.select_remove_curve["values"] = tuple(new_list)
+                self.select_remove_curve.set('')
+                name = self.sname.get()
+                self.load_link(self.temp)
+                self.sname.set(name)
+            else:
+                msg.showerror(parent=self, title="Error", message="No link in workspace, create a new one or load an existing link")
     
     
     def save(self):
@@ -946,6 +956,9 @@ class GUI(tk.Tk):
         self.links = links
         self.mechanisms = mechanisms
         self.machines = machines
+        self.geometry(f"+{self.winfo_screenwidth()//6}+0")
+        self.resizable(False, False)
+        self.title("KASM")
         
         self.pages = {
             "Curves": UICurve(self.notebook, self.curves),
@@ -998,7 +1011,8 @@ if __name__ == "__main__":
     #nn = UIMachine(wd, [mech,], [mac,])
     #nn.grid(row=0, column=0)
     #wd.mainloop()
-    gui = GUI(mechanisms=[mech,], machines=[mac,])
+    #gui = GUI(mechanisms=[mech,], machines=[mac,])
+    gui = GUI()
     gui.mainloop()
     
 

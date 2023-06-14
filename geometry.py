@@ -109,6 +109,8 @@ class Link:
         self.curves = curves
         self.thickness = thickness
         self.name = name
+        self.translation = Vector(0, 0)
+        self.rotation = 0
     
     
     def rotate(self, angle:float):
@@ -117,6 +119,7 @@ class Link:
         
         for conn in self.connections:
             conn.rotate(angle)
+        self.rotation+=angle
     
     
     def rotate_angle(self, angle:float):
@@ -129,6 +132,7 @@ class Link:
         
         for conn in self.connections:
             conn.translate(x, y)
+        self.translation+=Vector(x, y)
     
     
     def absolute(self):
@@ -227,7 +231,7 @@ class Mechanism:
         self.rotate(angle_rad(angle))
     
     
-    def output_rad(self, input_rad):
+    def output_rad(self, input_rad:float):
         """input_rad: crank angle relative to ground in rads
         raise a ValueError if the crank can't be placed in that position"""
         A = cos(input_rad)-self.k1-self.k2*cos(input_rad)+self.k3
@@ -243,14 +247,14 @@ class Mechanism:
         return solution_a, solution_b
     
     
-    def output_angle(self, input_angle):
+    def output_angle(self, input_angle:float):
         """input_angle: crank angle relative to ground in degrees
         raise a ValueError if the crank can't be placed in that position"""
         a, b = self.output_rad(angle_rad(input_angle))
         return rad_angle(a), rad_angle(b)
     
     
-    def coupler_rad(self, input_rad):
+    def coupler_rad(self, input_rad:float):
         """input_rad: crank angle relative to ground in rads
         raise a ValueError if the crank can't be placed in that position"""
         D = cos(input_rad)-self.k1+self.k4*cos(input_rad)+self.k5
@@ -266,14 +270,27 @@ class Mechanism:
         return solution_a, solution_b
     
     
-    def coupler_angle(self, input_angle):
+    def coupler_angle(self, input_angle:float):
         """input_angle: crank angle relative to ground in degrees
         raise a ValueError if the crank can't be placed in that position"""
         a, b = coupler_rad(angle_rad(input_angle))
         return rad_angle(a), rad_angle(b)
     
     
-    def solution(self, angle_rad):
+    def angular_velocity(self, input_rad1:float, input_rad2:float, dt:float, inversion:int):
+        """input_rad1: crank angle relative to ground in rads
+           input_rad2: second crank angle relative to ground in rads
+           dt: time between the two positions
+           Ground has an angular speeds of 0
+        raise a ValueError if the crank can't be placed in that position"""
+        assert inversion == 1 or inversion == 0, "Inversion can only by 0 or 1"
+        w_crank = (input_rad2-input_rad1)/dt
+        w_coupler = (self.coupler_rad(input_rad2)[inversion]-self.coupler_rad(input_rad1)[inversion])/dt 
+        w_output = (self.output_rad(input_rad2)[inversion]-self.output_rad(input_rad1)[inversion])/dt
+        return w_crank, w_coupler, w_output, 0
+    
+    
+    def solution(self, angle_rad:float):
         """Absolute position given an input angle for crank in radians
            Return value might be: one solution repeated twice, two different solutions
            or ValueError if this position is not possible"""
@@ -399,7 +416,7 @@ class SliderCrank:
         return d
     
     
-    def output_angle(self, input_angle, coupler_rotation):
+    def output_angle(self, input_angle:float, coupler_rotation:float):
         """input_rad: crank angle relative to ground in degrees
             coupler_rotation: rotation of the coupler in degrees
             Returns a distance"""
@@ -426,7 +443,19 @@ class SliderCrank:
         return rad_angle(a), rad_angle(b)
     
     
-    def solution(self, angle_rad):
+    def angular_velocity(self, input_rad1:float, input_rad2:float, dt:float, inversion:int):
+        """input_rad1: crank angle relative to ground in rads
+           input_rad2: second crank angle relative to ground in rads
+           dt: time between the two positions. 
+           Ground and output have angular speeds of 0
+        raise a ValueError if the crank can't be placed in that position"""
+        assert inversion == 1 or inversion == 0, "Inversion can only by 0 or 1"
+        w_crank = (input_rad2-input_rad1)/dt
+        w_coupler = (self.coupler_rad(input_rad2)[inversion]-self.coupler_rad(input_rad1)[inversion])/dt 
+        return w_crank, w_coupler, 0, 0
+    
+    
+    def solution(self, angle_rad:float):
         """Absolute position given an input angle for crank in radians
            Return value might be: one solution repeated twice, two different solutions
            or ValueError if this position is not possible"""
@@ -464,7 +493,7 @@ class SliderCrank:
 
 
 class Machine:
-    def __init__(self, mechanisms:List[Mechanism], power_graph:List[List[int]], name=""):
+    def __init__(self, mechanisms:List[Mechanism], power_graph:List[List[int]], name:str=""):
         """A machine is defined here as one or more 4-bar mechanisms connected
            - First Mechanism must be the input mechanism
            - power_graph: indicates what a mechanism powers. It is a list of lists where list 0 represents the input crank from the first mechanism
@@ -490,7 +519,24 @@ class Machine:
         return Machine(mechanisms=[m.copy() for m in self.mechanisms], power_graph=self.power_graph, name=self.name)
     
     
-    def solution(self, angle_rad, pattern:list=0)->List[List[Link]]:
+    def angular_velocity(self, input_rad1:float, input_rad2:float, dt:float, pattern:list=0):
+        """input_rad1: main crank angle relative to ground in rads
+           input_rad2: second main crank angle relative to ground in rads
+           dt: time between the two positions. 
+           pattern: indicates the inversions for each mechanism
+           angular velocities are returned for each one of the mechanisms in the order of creation of the Machine
+        raise a ValueError if the crank can't be placed in that position"""
+        sorting = topological_sort(self.power_graph)[1:]
+        snapshot_1 = self.solution(input_rad1, pattern)
+        snapshot_2 = self.solution(input_rad2, pattern)
+        velocities = [0 for i in range(len(self.mechanisms))]
+        for i in range(len(snapshot_1)):
+            velocities_single_mechanism = [(snapshot_2[i][x].rotation-snapshot_1[i][x].rotation)/dt for x in range(len(snapshot_1[i])) ]
+            velocities[sorting[i]-1] = velocities_single_mechanism
+        return velocities
+    
+    
+    def solution(self, angle_rad:float, pattern:list=0)->List[List[Link]]:
         inversions = None
         solutions = [0 for i in range(len(self.mechanisms)+1)]
         if type(pattern) == list:
