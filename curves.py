@@ -860,6 +860,11 @@ class UIMachine(ttk.Frame):
         self.select.set(name)
         self.load_machine(self.temp)
         self.temp_mechanisms = []
+        self.sname.set(name)
+        self.integrating_mech["values"] = []
+        self.integrating_mech.set('')
+        self.spower_graph.set('')
+        self.sinversion_array.set('')
     
     
     def delete(self):
@@ -985,25 +990,8 @@ class GUI(tk.Tk):
 if __name__ == "__main__":
     import examples
     #wd = tk.Tk()
-    mac = examples.build_compresor(12)
-    
-    c1 = Curve(Vector(0, 0), [Vector(x/20, (x/20)**2) for x in range(11)])
-    c2 = Curve(Vector(0, 0), [Vector(x/20, (x/20-1)**2) for x in range(10, 21)])
-    c3 = Curve(Vector(0, 0), [Vector(0, 0), Vector(1, 0)])
-    hc1 = Curve(Vector(0, 0), [Vector(x/40, 1+(0.25-(x/40-0.5)**2)**0.5) for x in range(41)])
-    hc2 = Curve(Vector(0, 0), [Vector(x/40, -1-(0.25-(x/40-0.5)**2)**0.5) for x in range(41)])
-    jcurve = Curve(Vector(0, 0), [Vector(0, 1), Vector(0, -1)])
-    jcurve2 = Curve(Vector(0, 0), [Vector(1, 1), Vector(1, -1)])
-    bc1 = Curve(Vector(0, 0), [Vector(x/20, -(x/20)**2) for x in range(21)])
-    bc2 = Curve(Vector(0, 0), [Vector(x/20, -(x/20-2)**2) for x in range(20, 41)])
-    bc3 = Curve(Vector(0, 0), [Vector(0, 0), Vector(2, 0)])
-    
-    
-    link = Link(Vector(0, 0), [Vector(0, 0), Vector(1, 0)], [c1, c2, c3], 0.0, name="crank")
-    link2 = Link(Vector(0, 0), [Vector(0.5, 1.25), Vector(0.5, -1.25)], [hc1.copy(), hc2.copy(), jcurve.copy(), jcurve2.copy()], 0.0, name="coupler")
-    link3 = Link(Vector(0, 0), [Vector(0.5, 1.25), Vector(0.5, -1.25)], [hc1, hc2, jcurve, jcurve2], 0.0, name="output")
-    link4 = Link(Vector(0, 0), [Vector(0, 0), Vector(2, 0)], [bc1, bc2, bc3], 0.0, name="ground")
-    mech = Mechanism(Vector(0, 0), -0.2*pi, [link, link2, link3, link4], ((0, 1), (0, 1), (0, 1), (0, 1)), name="Paco")
+    compresor_components = examples.build_compresor(3)
+    machine_components = examples.build_machine()
     
     #nn = UICurve(wd, [])
     #nn = UILink(wd, [], [])
@@ -1011,8 +999,8 @@ if __name__ == "__main__":
     #nn = UIMachine(wd, [mech,], [mac,])
     #nn.grid(row=0, column=0)
     #wd.mainloop()
-    #gui = GUI(mechanisms=[mech,], machines=[mac,])
-    gui = GUI()
+    gui = GUI(mechanisms=[*compresor_components[1], *machine_components[1]], machines=[compresor_components[0],machine_components[0]])
+    #gui = GUI()
     gui.mainloop()
     
 
