@@ -493,26 +493,42 @@ class SliderCrank:
 
 
 class Machine:
-    def __init__(self, mechanisms:List[Mechanism], power_graph:List[List[int]], name:str=""):
+    def __init__(self, mechanisms:List[Mechanism], power_graph:List[List[int]], auto_adjust:bool=False, name:str=""):
         """A machine is defined here as one or more 4-bar mechanisms connected
            - First Mechanism must be the input mechanism
            - power_graph: indicates what a mechanism powers. It is a list of lists where list 0 represents the input crank from the first mechanism
              so mechanism '0' is represented in list as '1'. Example: [[1, 3], [], [], [2]] in this example the input crank powers mechanism 1 and 3 and mechanism 3 powers mechanism 2
              if a mechanism doesn't power anything place an empty list. Bear in mind mechanism 2 will only be powered by the output of mechanism 3.
+           - auto_adjust: indicates if mechanisms should be translated to the corresponding output
            - Important to consider that a mechanism cannot be powered by more than one output, if this happens only the last one will be taken as power
            - SliderCrank cannot power any mechanism
         """
         assert all([type(mechanisms[i]) != SliderCrank or len(power_graph[i+1]) == 0 for i in range(len(mechanisms))]), "Slider cannot power another mechanism"
+        assert 1 in power_graph[0], "Mechanism 1 must be powered by its own crank"
         
         self.name = name
-        self.mechanisms = mechanisms
+        self.mechanisms = mechanisms[:]
         self.power_graph = power_graph
         self.input_graph = [-1 for i in range(len(power_graph))]
         for power in range(len(power_graph)):
             for receiver in power_graph[power]:
                 self.input_graph[receiver] = power
+        
         if -1 in self.input_graph[1:]:
             raise ValueError("One or more mechanisms are not powered")
+        
+        if auto_adjust:
+            for m in range(1, len(self.input_graph)):
+                powered_mech_connection = self.mechanisms[m-1].connections[-1][0] #Ground connection of slave mechanism Index
+                if self.input_graph[m]:
+                    powering_mech = self.input_graph[m]-1
+                    powering_mech_connection_to_attach = self.mechanisms[powering_mech].connections[-1][1] #Ground connection of commander mechanism Index
+                    displacement = self.mechanisms[powering_mech].links[-1].connections[powering_mech_connection_to_attach]-self.mechanisms[m-1].links[-1].connections[powered_mech_connection]
+                    displacement+= self.mechanisms[powering_mech].moved
+                else:
+                    powering_mech_connection_to_attach = self.mechanisms[0].connections[0][0] #Ground connection of commander mechanism Index
+                    displacement = self.mechanisms[0].links[0].connections[powering_mech_connection_to_attach]-self.mechanisms[m-1].links[0].connections[powered_mech_connection]
+                self.mechanisms[m-1].translate(displacement.x, displacement.y)
     
     
     def copy(self):
