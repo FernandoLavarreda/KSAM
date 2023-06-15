@@ -183,11 +183,11 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-
 if __name__ == "__main__":
     import examples
     
-    machine = examples.build_machine()[0]
+    machine = examples.build_machine()
     plot_rotation_mach(machine, frames=100, inversion=1)
     
     
-    compresor = examples.build_compresor(12)[0]
+    compresor = examples.build_compresor(12)
     plot_rotation_mach(compresor, frames=100, inversion=1, lims=[[-17, 17], [-17, 17]])
     
 

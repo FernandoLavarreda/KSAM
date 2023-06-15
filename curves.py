@@ -990,8 +990,8 @@ class GUI(tk.Tk):
 if __name__ == "__main__":
     import examples
     #wd = tk.Tk()
-    compresor_components = examples.build_compresor(3)
-    machine_components = examples.build_machine()
+    compresor = examples.build_compresor(3)
+    machine = examples.build_machine()
     
     #nn = UICurve(wd, [])
     #nn = UILink(wd, [], [])
@@ -999,7 +999,7 @@ if __name__ == "__main__":
     #nn = UIMachine(wd, [mech,], [mac,])
     #nn.grid(row=0, column=0)
     #wd.mainloop()
-    gui = GUI(mechanisms=[*compresor_components[1], *machine_components[1]], machines=[compresor_components[0],machine_components[0]])
+    gui = GUI(mechanisms=compresor.mechanisms[:]+machine.mechanisms[:], machines=[compresor, machine])
     #gui = GUI()
     gui.mainloop()
     

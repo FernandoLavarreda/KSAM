@@ -37,7 +37,7 @@ def build_machine():
     mech3.translate(2, 0)
 
     machine = gm.Machine([mech, mech2, mech3], power_graph=[[1], [2], [3], []], name="machine")
-    return machine, [mech, mech2, mech3], [link, link2, link3, link4], [c1, c2, c3, hc1, hc2, jcurve, jcurve2, bc1, bc2, bc3]
+    return machine
 
 
 def build_compresor(pistons:int):
@@ -81,7 +81,7 @@ def build_compresor(pistons:int):
         npistons.append(p)
     empty = [[] for i in range(pistons)]
     compresor = gm.Machine(npistons, power_graph=[[i+1 for i in range(pistons)], *empty], name=f"compresor {pistons} pistons")
-    return compresor, npistons, [crank, coupler, slider, ground], [half_circle, half_circle2, half_circle3, line_down, line_down2, line_up, line_up2, side1, side2, side3, side4]
+    return compresor
 
 
 if __name__ == "__main__":
