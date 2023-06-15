@@ -992,15 +992,14 @@ if __name__ == "__main__":
     #wd = tk.Tk()
     compresor = examples.build_compresor(3)
     machine = examples.build_machine()
-    
+    vline = examples.build_vline()
     #nn = UICurve(wd, [])
     #nn = UILink(wd, [], [])
     #nn = UIMechanism(wd, [link, link2, link3, link4], [mech,])
     #nn = UIMachine(wd, [mech,], [mac,])
     #nn.grid(row=0, column=0)
     #wd.mainloop()
-    gui = GUI(mechanisms=compresor.mechanisms[:]+machine.mechanisms[:], machines=[compresor, machine])
-    #gui = GUI()
+    gui = GUI(mechanisms=compresor.mechanisms[:]+machine.mechanisms[:], machines=[compresor, machine, vline])
     gui.mainloop()
     
 

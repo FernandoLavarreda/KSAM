@@ -114,7 +114,8 @@ def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colo
         return anim
 
 
-def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-1.5, 7], [-2.5, 4]], colors=["red", "purple", "green", "orange", "blue", "black", "yellow"], axes:Axes=None, fig:Figure=None):
+def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-1.5, 7], [-2.5, 4]], colors=["red", "purple", "green", "orange", "blue", "black", "yellow"],\
+                       axes:Axes=None, fig:Figure=None, animation_limits=(0, gm.pi*2), invert:bool=False, save=""):
     """
     Inversion can be either 0 for 0s list a 1 for 1s list or a list indicating the inversion for each mechanism
     """
@@ -151,7 +152,13 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-
     
     
     def animate(i):
-        radian = 2*gm.pi*i/frames
+        if invert:
+            if i >= frames/2:
+                radian = animation_limits[1]-(animation_limits[1]-animation_limits[0])*(i/frames-0.5)*2
+            else:
+                radian = (animation_limits[1]-animation_limits[0])*2*i/frames+animation_limits[0]
+        else:
+            radian = (animation_limits[1]-animation_limits[0])*i/frames+animation_limits[0]
         solution = machine.solution(radian, inversion)
         for mechanism in range(len(lines)):
             for link in range(len(lines[mechanism])):
@@ -172,6 +179,9 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-
     
     anim = FuncAnimation(fig, animate, frames=frames, interval=20, blit=True)
     
+    if save:
+        anim.save(save)
+    
     if not axes:
         plt.show()
     else:
@@ -184,12 +194,13 @@ if __name__ == "__main__":
     import examples
     
     machine = examples.build_machine()
-    plot_rotation_mach(machine, frames=100, inversion=1)
-    
+    plot_rotation_mach(machine, frames=100, inversion=1, save="examples/machine.gif")
     
     compresor = examples.build_compresor(12)
-    plot_rotation_mach(compresor, frames=100, inversion=1, lims=[[-17, 17], [-17, 17]])
+    #plot_rotation_mach(compresor, frames=100, inversion=1, lims=[[-17, 17], [-17, 17]])
     
-
+    powered = examples.build_double_crank(5)
+    plot_rotation_mach(powered, frames=200, inversion=1, lims=[[-12, 24], [-17, 17]], animation_limits=[-gm.pi*3/4, gm.pi*3/4], invert=True, save="examples/powered_compresor.gif")
+    
 
 

@@ -29,14 +29,12 @@ def build_machine():
     mech = gm.Mechanism(gm.Vector(0, 0), -0.2*gm.pi, [link, link2, link3, link4], ((0, 1), (0, 1), (0, 1), (0, 1)))
     mech2 = mech.copy()
     mech2.rotate(0.2*gm.pi)
-    mech2.translate(mech.links[3].connections[mech.connections[3][1]].x, mech.links[3].connections[mech.connections[3][1]].y)
-
     mech3 = mech.copy()
     mech3.rotate(0.2*gm.pi)
-    mech3.translate(mech.links[3].connections[mech.connections[3][1]].x, mech.links[3].connections[mech.connections[3][1]].y)
-    mech3.translate(2, 0)
-
-    machine = gm.Machine([mech, mech2, mech3], power_graph=[[1], [2], [3], []], name="machine")
+    mech.name = "machine 1"
+    mech2.name = "machine 2" 
+    mech3.name = "machine 3"
+    machine = gm.Machine([mech, mech2, mech3], power_graph=[[1], [2], [3], []], name="machine", auto_adjust=True)
     return machine
 
 
@@ -80,8 +78,76 @@ def build_compresor(pistons:int):
         p.rotate(distance*i)
         npistons.append(p)
     empty = [[] for i in range(pistons)]
-    compresor = gm.Machine(npistons, power_graph=[[i+1 for i in range(pistons)], *empty], name=f"compresor {pistons} pistons")
+    compresor = gm.Machine(npistons, power_graph=[[i+1 for i in range(pistons)], *empty], name=f"compresor {pistons} pistons", auto_adjust=True)
     return compresor
+
+
+def build_vline():
+    gg = gm.Curve(gm.Vector(0, 0), [gm.Vector(0,0,),])
+    ground = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0)], [gg,], 0.0)
+    half_circle = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/20, (4-(x/20)**2)**0.5) for x in range(-40, 41)])
+    half_circle.rotate(gm.pi/2)
+    half_circle2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/80, (0.5-(x/80)**2)**0.5) for x in range(-36, 37)])
+    half_circle2.rotate(-gm.pi/2)
+    half_circle2.translate(4, 0)
+    line_down = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 2), gm.Vector(4.5, 0.45)])
+    line_up = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, -2), gm.Vector(4.5, -0.45)])
+    crank = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(4, 0)], [half_circle, line_down, line_up, half_circle2], 0.0)
+    
+    half_circle3 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/80, (0.25-(x/80)**2)**0.5) for x in range(-40, 41)])
+    half_circle3.rotate(gm.pi/2)
+    line_down2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 0.5), gm.Vector(12, 0)])
+    line_up2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, -0.5), gm.Vector(12, 0)])
+    coupler = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(12, 0)], [half_circle3, line_down2, line_up2], 0.0)
+    
+    side1 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(1, 0)])
+    side2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(0, 2)])
+    side3 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 2), gm.Vector(1, 2)])
+    side4 = gm.Curve(gm.Vector(0, 0), [gm.Vector(1, 0), gm.Vector(1, 2)])
+    slider = gm.Link(gm.Vector(0, 0), [gm.Vector(0.5, 1)], [side1, side2, side3, side4], 0.0)
+    piston_1 = gm.SliderCrank(gm.Vector(0, 0), 0, [crank, coupler, slider, ground], ((0, 1), (0, 1), (0,), (0,)), name="v-piston-1")
+    piston_1.rotate(gm.pi/4)
+    piston_2 = piston_1.copy()
+    piston_2.rotate(gm.pi/2)
+    piston_2.name = "v-piston-2"
+    vline = gm.Machine([piston_1, piston_2], power_graph=[[1, 2], [], []], name=f"V-Engine")
+    return vline
+
+
+def build_double_crank(pistons:int):
+    compresor = build_compresor(pistons)
+    crank = compresor.mechanisms[0].links[0].copy()
+    output = crank.copy()
+    if pistons%2 == 0:
+        output.rotate(gm.pi/2)
+    else:
+        output.rotate(gm.pi/(pistons)*(pistons-1)/2)
+    
+    output.connections = output.connections[::-1]
+    radii_1 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/10, -(6.25-(x/10)**2)**0.5) for x in range(-25, 26)])
+    radii_2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/10, -(12.25-(x/10)**2)**0.5) for x in range(-35, 36)])
+    
+    r_1 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/10, (0.25-(x/10)**2)**0.5) for x in range(-5, 6)])
+    r_2 = r_1.copy()
+    r_1.translate(-3, 0)
+    r_2.translate(3, 0)
+    coupler = gm.Link(gm.Vector(0, 0), [gm.Vector(-3, 0), gm.Vector(3, 0)], [radii_1, radii_2, r_1, r_2], 0.0)
+    
+    horizontal_1 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0.5, 1), gm.Vector(1.5, 1)])
+    horizontal_2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(2, 0)])
+    diagonal_1 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(0.5, 1)])
+    diagonal_2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(1.5, 1), gm.Vector(2, 0)])
+    temp_link = gm.Link(gm.Vector(0, 0), [gm.Vector(1, 0.5), ], [diagonal_1, horizontal_1, diagonal_2, horizontal_2], 0.0)
+    temp_link_2 = temp_link.copy()
+    temp_link_2.translate(6, 0)
+    ground = gm.Link(gm.Vector(0, 0), [temp_link.connections[0], temp_link_2.connections[0]], temp_link.curves[:]+temp_link_2.curves[:], 0.0)
+    
+    
+    power_mech = gm.Mechanism(gm.Vector(0, 0), 0, [crank, coupler, output, ground], ((0, 1), (0, 1), (0, 1), (0, 1)), name="Externally powered compresor")
+    empty = [[] for i in range(pistons)]
+    powered = [i+1 for i in range(1, pistons+1)]
+    powered_compresor = gm.Machine([power_mech, *compresor.mechanisms[:]], power_graph=[[1], powered, *empty], name=f"Powered Compresor", auto_adjust=True)
+    return powered_compresor
 
 
 if __name__ == "__main__":
