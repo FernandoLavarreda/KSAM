@@ -243,7 +243,15 @@ class Mechanism:
             solution_b = 2*atan((-B-sqrt(B*B-4*A*C))/2/A)
         except ValueError:
             raise ValueError("Crank can't be put in that position")
-        
+        except ZeroDivisionError:
+            if (-B+sqrt(B*B-4*A*C)) < 0:
+                solution_a = -pi
+            else:
+                solution_a = pi
+            if (-B-sqrt(B*B-4*A*C)) < 0:
+                solution_b = -pi
+            else:
+                solution_b = pi
         return solution_a, solution_b
     
     

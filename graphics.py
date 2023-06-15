@@ -197,10 +197,10 @@ if __name__ == "__main__":
     plot_rotation_mach(machine, frames=100, inversion=1, save="examples/machine.gif")
     
     compresor = examples.build_compresor(12)
-    #plot_rotation_mach(compresor, frames=100, inversion=1, lims=[[-17, 17], [-17, 17]])
+    plot_rotation_mach(compresor, frames=100, inversion=1, lims=[[-17, 17], [-17, 17]])
     
-    powered = examples.build_double_crank(5)
-    plot_rotation_mach(powered, frames=200, inversion=1, lims=[[-12, 24], [-17, 17]], animation_limits=[-gm.pi*3/4, gm.pi*3/4], invert=True, save="examples/powered_compresor.gif")
+    powered = examples.build_double_crank(7)
+    plot_rotation_mach(powered, frames=100, inversion=1, lims=[[-12, 24], [-17, 17]], save="examples/powered_compresor.gif")
     
 
 

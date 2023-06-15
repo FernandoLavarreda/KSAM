@@ -920,6 +920,8 @@ class UIMachine(ttk.Frame):
                 msg.showerror(parent=self, title="Error", message=str(e))
             else:
                 if animate_:
+                    remember = self.bsave_image.get()
+                    self.bsave_image.set(False)
                     self.load_machine(machine)
                     xlims = [abs(x) for x in list(self.graphics.axis.get_xlim())]
                     ylims = [abs(y) for y in list(self.graphics.axis.get_ylim())]
@@ -930,10 +932,19 @@ class UIMachine(ttk.Frame):
                     ylims[1] = biggest*1.15
                     self.graphics.clear()
                     self.graphics.render()
-                    animation = graphics.plot_rotation_mach(machine, frames=100, lims=[xlims, ylims], inversion=inversions, axes=self.graphics.axis, fig=self.graphics.fig)
+                    self.bsave_image.set(remember)
+                    save_name = ""
+                    if self.bsave_image.get():
+                        save_name = fd.asksaveasfilename(parent=self, title="Save screen", filetypes=(("GIF", "gif"),), initialdir="C:", defaultextension="gif")
+                    animation = graphics.plot_rotation_mach(machine, frames=100, lims=[xlims, ylims], inversion=inversions, axes=self.graphics.axis, fig=self.graphics.fig, save=save_name)
                 else:
+                    save_name = ""
+                    if self.bsave_image.get():
+                        save_name = fd.asksaveasfilename(parent=self, title="Save screen", filetypes=(("PNG", "png"),), initialdir="C:", defaultextension="png")
                     solution = machine.solution(self.angle_rotate.get()*pi/180, inversions)
                     graphics.plot_machine(solution, self.graphics.axis)
+                    if save_name:
+                        self.graphics.fig.savefig(save_name)
                 
                 self.graphics.render()
     
@@ -993,13 +1004,14 @@ if __name__ == "__main__":
     compresor = examples.build_compresor(3)
     machine = examples.build_machine()
     vline = examples.build_vline()
+    power_comp = examples.build_double_crank(7)
     #nn = UICurve(wd, [])
     #nn = UILink(wd, [], [])
     #nn = UIMechanism(wd, [link, link2, link3, link4], [mech,])
     #nn = UIMachine(wd, [mech,], [mac,])
     #nn.grid(row=0, column=0)
     #wd.mainloop()
-    gui = GUI(mechanisms=compresor.mechanisms[:]+machine.mechanisms[:], machines=[compresor, machine, vline])
+    gui = GUI(mechanisms=compresor.mechanisms[:]+machine.mechanisms[:], machines=[compresor, machine, vline, power_comp])
     gui.mainloop()
     
 
