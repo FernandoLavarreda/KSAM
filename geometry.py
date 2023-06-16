@@ -202,6 +202,9 @@ class Mechanism:
             if i == 2:
                 self.links[i].translate(-self.links[i].connections[self.connections[i][1]].x, -self.links[i].connections[self.connections[i][1]].y)
                 self.links[i].rotate(vector_angle(self.links[i].connections[self.connections[i][1]], self.links[i].connections[self.connections[i][0]])+self.rotation+pi)
+                #Do not know why but this fixed the error
+                if abs(vector_angle(self.links[i].connections[self.connections[i][1]], self.links[i].connections[self.connections[i][0]])+self.rotation+pi-pi*2)<1e-10:
+                    self.links[i].rotate(pi)
             else:
                 self.links[i].translate(-self.links[i].connections[self.connections[i][0]].x, -self.links[i].connections[self.connections[i][0]].y)
                 self.links[i].rotate(-vector_angle(self.links[i].connections[self.connections[i][0]], self.links[i].connections[self.connections[i][1]])+self.rotation)
@@ -242,7 +245,11 @@ class Mechanism:
             solution_a = 2*atan((-B+sqrt(B*B-4*A*C))/2/A)
             solution_b = 2*atan((-B-sqrt(B*B-4*A*C))/2/A)
         except ValueError:
-            raise ValueError("Crank can't be put in that position")
+            if (B*B-4*A*C) < -1e-15:
+                raise ValueError("Crank can't be put in that position")
+            else:
+                solution_a = 2*atan((-B)/2/A)
+                solution_b = solution_a
         except ZeroDivisionError:
             if (-B+sqrt(B*B-4*A*C)) < 0:
                 solution_a = -pi
