@@ -2,7 +2,7 @@
 #Program to analyze Mechanisms, Graduation Project UVG
 
 
-from typing import List, Tuple, Mapping
+from typing import List, Tuple, Mapping, Callable
 from math import sin, cos, pi, sqrt, atan, atan2, asin
 
 
@@ -64,6 +64,119 @@ def vector_angle(a:Vector, b:Vector):
     """Get the angle between two position"""
     return atan2(b.y-a.y, b.x-a.x)
 
+
+def build_callable_function(string:str):
+    """Build function from string"""
+    def function(x:float):
+        call = string.replace("x", str(x))
+        return eval(call)
+    return function
+
+
+class Function:
+    def __init__(self, start:float, end:float, process:Callable[[float], float]=None, string_function=""):
+        assert start<end, "Start must be smallet than end"
+        assert (process != None) ^ (string_function != ""), "Either process xor string_function must be valid"
+        self.start = start
+        self.end = end
+        if process:
+            self.func = process
+        else:
+            self.func = build_callable_function(string_function)
+    
+    
+    def __call__(self, value:float):
+        if value < self.start or value > self.end:
+            raise ValueError(f"{value} out of bounds, limits: [{self.start}, {self.end}]")
+        return self.func(value)
+    
+    
+    def centroid(self, dx:float=1e-10):
+        nvalue = self.start+dx
+        area = 0
+        xcoord_numerator = 0
+        ycoord_numerator = 0
+        while nvalue < self.end:
+            compute = self(nvalue)*dx
+            xcoord_numerator+= compute*nvalue
+            ycoord_numerator+= compute*self(nvalue)/2
+            area+=compute
+        centroid_ = Vector(xcoord_numerator/area, ycoord_numerator/area)
+        return centroid_, area
+    
+    
+    def __sub__(self, other):
+        """Create new Function from substracting one from another"""
+        assert type(other) == type(self), "Can only substract self from other Function"
+        if self.start < other.start:
+            start = other.start
+        else:
+            start = self.start
+        if self.end > other.end:
+            end = other.end
+        else:
+            end = self.end
+        
+        def call_(x:float):
+            return self(x)-other(x)
+        
+        return Function(start, end, call_)
+    
+    
+    def __add__(self, other):
+        """Create new Function from adding one from another"""
+        assert type(other) == type(self), "Can only substract self from other Function"
+        if self.start < other.start:
+            start = other.start
+        else:
+            start = self.start
+        if self.end > other.end:
+            end = other.end
+        else:
+            end = self.end
+        
+        def call_(x:float):
+            return self(x)+other(x)
+        
+        return Function(start, end, call_)
+    
+    
+    def concatenate(self, other):
+        """Create new Function from putting one next to the other, smallest start 
+           Function has precedence. Undefined behaviour is out of bounds 
+           for both functions (space in between) and therefore replaced with linear interpolation
+           between the last and first value of each one of the funcitons"""
+        if self.start < other.start:
+            if self.end <  other.end:
+                if self.end < other.start:
+                    m = other(other.start)/self(self.end)
+                    def function(x:float):
+                        if x <= self.end:
+                            return self.func(x)
+                        elif x < other.start:
+                            return m*(x-self.end)+self(self.end)
+                        else:
+                            return other.func(x)
+                else:
+                    def function(x:float):
+                        if x <= self.end:
+                            return self.func(x)
+                        else:
+                            return other.func(x)
+                return Function(self.start, other.end, self.function)
+            return Function(self.start, self.end, self.func)
+        
+        other.concatenate(self)
+
+
+    
+def concatenate_functions(functions:List[Function]):
+    ordered = funcitons.sorted(key=lambda x: x.start)
+    fn = ordered[0]
+    for f in ordered[1:]:
+        fn = fn.concatenate(f)
+    return fn
+    
 
 
 class Curve:

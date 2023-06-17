@@ -34,7 +34,7 @@ def build_machine():
     mech.name = "machine 1"
     mech2.name = "machine 2" 
     mech3.name = "machine 3"
-    machine = gm.Machine([mech, mech2, mech3], power_graph=[[1], [2], [3], []], name="machine", auto_adjust=True)
+    machine = gm.Machine([mech, mech2, mech3], power_graph=[[1], [2], [3], []], name="Machine", auto_adjust=True)
     return machine
 
 
@@ -78,7 +78,7 @@ def build_compresor(pistons:int):
         p.rotate(distance*i)
         npistons.append(p)
     empty = [[] for i in range(pistons)]
-    compresor = gm.Machine(npistons, power_graph=[[i+1 for i in range(pistons)], *empty], name=f"compresor {pistons} pistons")
+    compresor = gm.Machine(npistons, power_graph=[[i+1 for i in range(pistons)], *empty], name=f"Compresor {pistons} pistons")
     return compresor
 
 
@@ -110,7 +110,7 @@ def build_vline():
     piston_2 = piston_1.copy()
     piston_2.rotate(gm.pi/2)
     piston_2.name = "v-piston-2"
-    vline = gm.Machine([piston_1, piston_2], power_graph=[[1, 2], [], []], name=f"V-Engine")
+    vline = gm.Machine([piston_1, piston_2], power_graph=[[1, 2], [], []], name=f"V-engine")
     return vline
 
 
@@ -149,7 +149,7 @@ def build_double_crank(pistons:int):
     power_mech = gm.Mechanism(gm.Vector(0, 0), 0, [crank, coupler, output, ground], ((0, 1), (0, 1), (0, 1), (0, 1)), name="Externally powered compresor")
     empty = [[] for i in range(pistons)]
     powered = [i+1 for i in range(1, pistons+1)]
-    powered_compresor = gm.Machine([power_mech, *compresor.mechanisms[:]], power_graph=[[1,], powered, *empty], name=f"Powered Compresor", auto_adjust=True)
+    powered_compresor = gm.Machine([power_mech, *compresor.mechanisms[:]], power_graph=[[1,], powered, *empty], name=f"Powered compresor", auto_adjust=True)
     return powered_compresor
 
 

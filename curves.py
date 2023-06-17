@@ -1004,7 +1004,7 @@ if __name__ == "__main__":
     compresor = examples.build_compresor(3)
     machine = examples.build_machine()
     vline = examples.build_vline()
-    power_comp = examples.build_double_crank(7)
+    power_comp = examples.build_double_crank(5)
     #nn = UICurve(wd, [])
     #nn = UILink(wd, [], [])
     #nn = UIMechanism(wd, [link, link2, link3, link4], [mech,])
