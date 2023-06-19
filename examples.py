@@ -154,6 +154,6 @@ def build_double_crank(pistons:int):
 
 
 if __name__ == "__main__":
-    cm = build_compresor(3)[0]
+    cm = build_compresor(3)
     print(cm.angular_velocity(0, gm.pi/2, 1))
 

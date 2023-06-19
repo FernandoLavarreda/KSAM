@@ -97,7 +97,7 @@ class Function:
         xcoord_numerator = 0
         ycoord_numerator = 0
         while nvalue < self.end:
-            compute = self(nvalue)*dx
+            compute = abs(self(nvalue)*dx)
             xcoord_numerator+= compute*nvalue
             ycoord_numerator+= compute*self(nvalue)/2
             area+=compute
@@ -171,7 +171,7 @@ class Function:
 
     
 def concatenate_functions(functions:List[Function]):
-    ordered = funcitons.sorted(key=lambda x: x.start)
+    ordered = sorted(functions, key=lambda x: x.start)
     fn = ordered[0]
     for f in ordered[1:]:
         fn = fn.concatenate(f)
@@ -180,18 +180,21 @@ def concatenate_functions(functions:List[Function]):
 
 
 class Curve:
-    def __init__(self, origin:Vector, vectors:List[Vector], name="", functions=""):
+    def __init__(self, origin:Vector, vectors:List[Vector], name="", functions="", function:Function=None):
         """Series of Vectors to create a profile
            origin: Absolute position where the start of the Curve is located"""
         self.vectors = vectors
         self.origin = origin
         self.name = name
         self.functions = functions
+        self.not_rotated = True
+        self.function = function
     
     
     def rotate(self, angle:float):
         for v in self.vectors:
             v.rotate(angle)
+        self.not_rotated = False
     
     
     def rotate_angle(self, angle:float):
@@ -208,15 +211,25 @@ class Curve:
     
     
     def copy(self):
-        return Curve(self.origin.copy(), [v.copy() for v in self.vectors], self.name, self.functions)
+        curve = Curve(self.origin.copy(), [v.copy() for v in self.vectors], self.name, self.functions, self.function)
+        curve.not_rotated = self.not_rotated
+        return curve
 
 
 
 class Link:
-    def __init__(self, origin:Vector, connections:List[Vector], curves:List[Curve], thickness:float, name=""):
+    def __init__(self, origin:Vector, connections:List[Vector], curves:List[Curve], thickness:float, name="", upper:List[int]=[], lower:List[int]=[], centroid=None):
         """A link is a segment of a mechanism for which the position and stress are desired
            origin: Absolute position where the start of the Link is located
-           connections: Vectors where another link may be connected to create a mechanism"""
+           connections: Vectors where another link may be connected to create a mechanism
+           curves: groups of curve that define the link's shape
+           thickness: depth of the link, important only if stresses are to be calculated
+           name: helps as identifier of the link
+           upper: index of the curves:List[Curve] for the curves that define the upper bound of the link,
+                  only important to define when calculating stresses
+           lower: index of the curves:List[Curve] for the curves that define the lower bound of the link,
+                  only important to define when calculating stresses"""
+        
         self.origin = origin
         self.connections = connections
         self.curves = curves
@@ -224,6 +237,9 @@ class Link:
         self.name = name
         self.translation = Vector(0, 0)
         self.rotation = 0
+        self.upper = upper
+        self.lower = lower
+        self.centroid_vector = centroid
     
     
     def rotate(self, angle:float):
@@ -249,7 +265,7 @@ class Link:
     
     
     def absolute(self):
-        return Link(self.origin, [conn+self.origin for conn in self.connections], [c.absolute() for c in self.curves], thickness)
+        return Link(self.origin, [conn+self.origin for conn in self.connections], [c.absolute() for c in self.curves], thickness, name, upper=self.upper[:], lower=self.lower[:])
     
     
     def length(self, a, b):
@@ -259,8 +275,51 @@ class Link:
         return vector_length(self.connections[a], self.connections[b])
     
     
+    def set_lims(self, indexes:List[int], lims=1):
+        """Set functions defining limits of the link to calculate stresses"""
+        functions_ = []
+        for v in indexes:
+            if v >= len(self.curves) or v < 0:
+                raise ValueError(f"{v} is out of bounds, Curves is only size {len(self.curves)}")
+            if self.curves[v].function == None or not self.curves[v].not_rotated:
+                raise ValueError(f"Curve {self.curves[v]} with index {v} has no function defining it or has been rotated, therefore is not valid")
+            functions_.append(self.curves[v].function)
+        
+        if lims:
+            self.upper = functions_
+        else:
+            self.lower = functions_
+    
+    
+    def centroid(self, dx:float, tolerance:float=1e-3):
+        """To speed up calculation intesection between curves is not evaluated,
+           make sure upper curve is above lower curve throught the domain"""
+        if not self.upper or not self.lower:
+            raise ValueError("Either lower or upper limits are missing")
+        up_function = concatenate_functions(self.upper)
+        lo_function = concatenate_functions(self.lower)
+        if abs(up_function.start-lo_function.start)>tolerance or abs(up_function.end-lo_function.end)>tolerance:
+            raise ValueError("End and start of functions defining the upper and lower bounds is greater than tolerance accepeted")
+        area = 0
+        position = dx/2+up_function.start
+        ycoord_numerator = 0
+        xcoord_numerator = 0 #Repeating similar process to Function computation of centroid because the y coordinate will not be accurate when substracting the upper and lower bounds of the link
+        while position < up_function.end:
+            evaluate_high = up_function(position)
+            evaluate_low = lo_function(position)
+            compute = dx*(evaluate_high-evaluate_low)
+            area+=compute
+            y_centroid = (evaluate_high-evaluate_low)/2+evaluate_low
+            xcoord_numerator+=position*compute
+            ycoord_numerator+=y_centroid*compute
+            position+=dx
+        
+        self.centroid_vector = Vector(xcoord_numerator/area, ycoord_numerator/area)
+        return self.centroid_vector
+    
+    
     def copy(self):
-        return Link(self.origin.copy(), [conn.copy() for conn in self.connections], [c.copy() for c in self.curves], self.thickness, self.name)
+        return Link(self.origin.copy(), [conn.copy() for conn in self.connections], [c.copy() for c in self.curves], self.thickness, self.name, upper=self.upper[:], lower=self.lower[:])
 
 
 
