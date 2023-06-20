@@ -115,7 +115,7 @@ def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colo
 
 
 def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-1.5, 7], [-2.5, 4]], colors=["red", "purple", "green", "orange", "blue", "black", "yellow"],\
-                       axes:Axes=None, fig:Figure=None, animation_limits=(0, gm.pi*2), invert:bool=False, save=""):
+                       axes:Axes=None, fig:Figure=None, animation_limits=(0, gm.pi*2), invert:bool=False, mass_center:bool=False, save=""):
     """
     Inversion can be either 0 for 0s list a 1 for 1s list or a list indicating the inversion for each mechanism
     """
@@ -137,10 +137,18 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-
     current_mech = 0
     current_link = 0
     color = 0
+    centroids = []
     for mechanism_ in starter_sol:
         lines.append([])
         current_link = 0
-        
+        if starter_sol[current_mech][0].centroid_vector and mass_center:
+            if current_mech == 0:
+                inputs_ = 0
+            else:
+                inputs_ = 1
+            centroids.append(ax.scatter([link.centroid_vector.x for link in starter_sol[current_mech][inputs_:]], [link.centroid_vector.y for link in starter_sol[current_mech][inputs_:]], color="red"))
+        else:
+            centroids.append(None)
         for link_ in mechanism_:
             lines[-1].append([])
             if not(current_mech != 0 and current_link == 0):
@@ -175,6 +183,14 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-
                 for curve in link:
                     ret.append(curve)
         
+        for mechanism__ in range(len(solution)):
+            if centroids[mechanism__]:
+                if mechanism__ == 0:
+                    inputs_ = 0
+                else:
+                    inputs_ = 1
+                centroids[mechanism__].set_offsets([(link.centroid_vector.x, link.centroid_vector.y) for link in solution[mechanism__][inputs_:]])
+                ret.append(centroids[mechanism__])
         return ret
     
     anim = FuncAnimation(fig, animate, frames=frames, interval=20, blit=True)
@@ -191,16 +207,20 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-
 
 
 if __name__ == "__main__":
+    import sys
     import examples
     
-    machine = examples.build_machine()
-    plot_rotation_mach(machine, frames=100, inversion=1, save="")
+    if '1' in sys.argv:
+        machine = examples.build_machine()
+        plot_rotation_mach(machine, frames=100, inversion=1, save="examples/mass_center.gif", mass_center=True)
     
-    compresor = examples.build_compresor(5)
-    plot_rotation_mach(compresor, frames=100, inversion=1, lims=[[-17, 17], [-17, 17]])
+    if '2' in sys.argv:
+        compresor = examples.build_compresor(5)
+        plot_rotation_mach(compresor, frames=100, inversion=1, lims=[[-17, 17], [-17, 17]], save="")
     
-    powered = examples.build_double_crank(5)
-    plot_rotation_mach(powered, frames=200, inversion=[0, 1, 1, 1, 1, 1], lims=[[-12, 24], [-17, 17]], save="")
+    if '3' in sys.argv:
+        powered = examples.build_double_crank(5)
+        plot_rotation_mach(powered, frames=200, inversion=[0, 1, 1, 1, 1, 1], lims=[[-12, 24], [-17, 17]], save="")
     
 
 

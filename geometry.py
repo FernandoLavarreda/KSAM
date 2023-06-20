@@ -43,7 +43,7 @@ class Vector:
     
     
     def __str__(self):
-        return f"Vector: \nx: {self.x}\ny: {self.y}"
+        return f"Vector: \nx: {self.x}\ny: {self.y}\n"
     
     
     def size(self):
@@ -146,7 +146,7 @@ class Function:
            Function has precedence. Undefined behaviour is out of bounds 
            for both functions (space in between) and therefore replaced with linear interpolation
            between the last and first value of each one of the funcitons"""
-        if self.start < other.start:
+        if self.start <= other.start:
             if self.end <  other.end:
                 if self.end < other.start:
                     m = other(other.start)/self(self.end)
@@ -163,7 +163,7 @@ class Function:
                             return self.func(x)
                         else:
                             return other.func(x)
-                return Function(self.start, other.end, self.function)
+                return Function(self.start, other.end, function)
             return Function(self.start, self.end, self.func)
         
         other.concatenate(self)
@@ -222,16 +222,16 @@ class Curve:
 
 
 class Link:
-    def __init__(self, origin:Vector, connections:List[Vector], curves:List[Curve], thickness:float, name="", upper:List[int]=[], lower:List[int]=[], centroid=None):
+    def __init__(self, origin:Vector, connections:List[Vector], curves:List[Curve], thickness:float, name="", upper:List[Function]=[], lower:List[Function]=[], centroid=None):
         """A link is a segment of a mechanism for which the position and stress are desired
            origin: Absolute position where the start of the Link is located
            connections: Vectors where another link may be connected to create a mechanism
            curves: groups of curve that define the link's shape
            thickness: depth of the link, important only if stresses are to be calculated
            name: helps as identifier of the link
-           upper: index of the curves:List[Curve] for the curves that define the upper bound of the link,
+           upper: list of Function that define the upper bound of the link,
                   only important to define when calculating stresses
-           lower: index of the curves:List[Curve] for the curves that define the lower bound of the link,
+           lower: list of Function that define the lower bound of the link,
                   only important to define when calculating stresses"""
         
         self.origin = origin
@@ -291,7 +291,7 @@ class Link:
         for v in indexes:
             if v >= len(self.curves) or v < 0:
                 raise ValueError(f"{v} is out of bounds, Curves is only size {len(self.curves)}")
-            if self.curves[v].function == None or not self.curves[v].not_rotated:
+            if self.curves[v].function == None or not self.curves[v].computable_centroid:
                 raise ValueError(f"Curve {self.curves[v]} with index {v} has no function defining it or has been rotated, therefore is not valid")
             functions_.append(self.curves[v].function)
         
@@ -307,12 +307,6 @@ class Link:
            centroid must be computed before translating and/or rotating the Link"""
         if not self.upper or not self.lower:
             raise ValueError("Either lower or upper limits are missing")
-        
-        if any([not f.computable_centroid for f in self.upper]):
-            raise ValueError("Cannot compute centroid of one or more upper bound curves because it has been translated, rotated or has no function defining it")
-        
-        if any([not f.computable_centroid for f in self.lower]):
-            raise ValueError("Cannot compute centroid of one or more lower bound curves because it has been translated, rotated or has no function defining it")
         
         up_function = concatenate_functions(self.upper)
         lo_function = concatenate_functions(self.lower)
@@ -337,12 +331,15 @@ class Link:
     
     
     def copy(self):
-        return Link(self.origin.copy(), [conn.copy() for conn in self.connections], [c.copy() for c in self.curves], self.thickness, self.name, upper=self.upper[:], lower=self.lower[:], centroid=self.centroid_vector)
+        link = Link(self.origin.copy(), [conn.copy() for conn in self.connections], [c.copy() for c in self.curves], self.thickness, self.name, upper=self.upper[:], lower=self.lower[:])
+        if self.centroid_vector:
+            link.centroid_vector = self.centroid_vector.copy()
+        return link
 
 
 
 class Mechanism:
-    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], init=True, name="", stress_anaylisis:bool=False, dx:float=0):
+    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], init=True, name="", stress_analysis:bool=False, dx:float=0):
         """Representation of 4 bar mechanism, must be ordered as follows: a (crank), b (coupler), c (output), d (bench/ground)
            connections: numbers indicating the connection points from the links to use"""
         assert len(connections) == len(links), "Missmatch between connections and links"
@@ -363,9 +360,9 @@ class Mechanism:
         self.k4 = self.d/self.b
         self.k5 = (self.c*self.c-self.d*self.d-self.a*self.a-self.b*self.b)/(2*self.a*self.b)
         self.size = (self.a+self.b)*1.1
-        self.stress_anaylisis = stress_anaylisis
+        self.stress_analysis = stress_analysis
         
-        if stress_anaylisis:
+        if stress_analysis:
             assert dx>0, "Requiring a dx>0 for stress analysis"
             for link in self.links:
                 link.centroid(dx)
@@ -406,8 +403,8 @@ class Mechanism:
     
     
     def copy(self):
-        mechanism = Mechanism(self.origin.copy(), self.rotation, links=self.links, connections=[i for i in self.connections], init=False, name=self.name)
-        mechanism.stress_anaylisis = self.stress_anaylisis
+        mechanism = Mechanism(self.origin.copy(), self.rotation, links=self.links[:], connections=[i for i in self.connections], init=False, name=self.name)
+        mechanism.stress_analysis = self.stress_analysis
         mechanism.translate(self.moved.x, self.moved.y)
         return mechanism
     
@@ -536,7 +533,7 @@ class Mechanism:
 
 
 class SliderCrank:
-    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], offset:float=0, init=True, name="", stress_anaylisis:bool=False, dx:float=0):
+    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], offset:float=0, init=True, name="", stress_analysis:bool=False, dx:float=0):
         """Representation of 4 bar mechanism, must be ordered as follows: a (crank), b (coupler), c (output), d (bench/ground)
            Ground is an optional addition to the links
            connections: numbers indicating the connection points from the links to use"""
@@ -553,9 +550,9 @@ class SliderCrank:
         self.b = links[1].length(connections[1][0], connections[1][1])
         self.c = offset
         self.size = (self.a+self.b)*1.1
-        self.stress_anaylisis = stress_anaylisis
+        self.stress_analysis = stress_analysis
         
-        if stress_anaylisis:
+        if stress_analysis:
             assert dx>0, "Requiring a dx>0 for stress analysis"
             for link in self.links:
                 link.centroid()
@@ -602,7 +599,7 @@ class SliderCrank:
     
     def copy(self):
         slider_crank = SliderCrank(self.origin.copy(), self.rotation, links=self.links, connections=[i for i in self.connections], offset=self.c, init=False, name=self.name)
-        slider_crank.stress_anaylisis = self.stress_anaylisis
+        slider_crank.stress_analysis = self.stress_analysis
         slider_crank.translate(self.moved.x, self.moved.y)
         return slider_crank
     
