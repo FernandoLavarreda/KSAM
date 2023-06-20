@@ -187,14 +187,17 @@ class Curve:
         self.origin = origin
         self.name = name
         self.functions = functions
-        self.not_rotated = True
         self.function = function
+        if self.function:
+            self.computable_centroid = True
+        else:
+            self.computable_centroid = False
     
     
     def rotate(self, angle:float):
         for v in self.vectors:
             v.rotate(angle)
-        self.not_rotated = False
+        self.computable_centroid = False
     
     
     def rotate_angle(self, angle:float):
@@ -204,6 +207,7 @@ class Curve:
     def translate(self, x:float, y:float)->Vector:
         for v in self.vectors:
             v.translate(x, y)
+        self.computable_centroid = False
     
     
     def absolute(self):
@@ -212,7 +216,7 @@ class Curve:
     
     def copy(self):
         curve = Curve(self.origin.copy(), [v.copy() for v in self.vectors], self.name, self.functions, self.function)
-        curve.not_rotated = self.not_rotated
+        curve.computable_centroid = self.computable_centroid
         return curve
 
 
@@ -249,6 +253,9 @@ class Link:
         for conn in self.connections:
             conn.rotate(angle)
         self.rotation+=angle
+        
+        if self.centroid_vector:
+            self.centroid_vector.rotate(angle)
     
     
     def rotate_angle(self, angle:float):
@@ -262,6 +269,9 @@ class Link:
         for conn in self.connections:
             conn.translate(x, y)
         self.translation+=Vector(x, y)
+        
+        if self.centroid_vector:
+            self.centroid_vector.translate(x, y)
     
     
     def absolute(self):
@@ -293,9 +303,17 @@ class Link:
     
     def centroid(self, dx:float, tolerance:float=1e-3):
         """To speed up calculation intesection between curves is not evaluated,
-           make sure upper curve is above lower curve throught the domain"""
+           make sure upper curve is above lower curve throughout the domain
+           centroid must be computed before translating and/or rotating the Link"""
         if not self.upper or not self.lower:
             raise ValueError("Either lower or upper limits are missing")
+        
+        if any([not f.computable_centroid for f in self.upper]):
+            raise ValueError("Cannot compute centroid of one or more upper bound curves because it has been translated, rotated or has no function defining it")
+        
+        if any([not f.computable_centroid for f in self.lower]):
+            raise ValueError("Cannot compute centroid of one or more lower bound curves because it has been translated, rotated or has no function defining it")
+        
         up_function = concatenate_functions(self.upper)
         lo_function = concatenate_functions(self.lower)
         if abs(up_function.start-lo_function.start)>tolerance or abs(up_function.end-lo_function.end)>tolerance:
@@ -319,12 +337,12 @@ class Link:
     
     
     def copy(self):
-        return Link(self.origin.copy(), [conn.copy() for conn in self.connections], [c.copy() for c in self.curves], self.thickness, self.name, upper=self.upper[:], lower=self.lower[:])
+        return Link(self.origin.copy(), [conn.copy() for conn in self.connections], [c.copy() for c in self.curves], self.thickness, self.name, upper=self.upper[:], lower=self.lower[:], centroid=self.centroid_vector)
 
 
 
 class Mechanism:
-    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], init=True, name=""):
+    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], init=True, name="", stress_anaylisis:bool=False, dx:float=0):
         """Representation of 4 bar mechanism, must be ordered as follows: a (crank), b (coupler), c (output), d (bench/ground)
            connections: numbers indicating the connection points from the links to use"""
         assert len(connections) == len(links), "Missmatch between connections and links"
@@ -345,7 +363,12 @@ class Mechanism:
         self.k4 = self.d/self.b
         self.k5 = (self.c*self.c-self.d*self.d-self.a*self.a-self.b*self.b)/(2*self.a*self.b)
         self.size = (self.a+self.b)*1.1
+        self.stress_anaylisis = stress_anaylisis
         
+        if stress_anaylisis:
+            assert dx>0, "Requiring a dx>0 for stress analysis"
+            for link in self.links:
+                link.centroid(dx)
         
         if rotation > 2*pi:
             self.rotation = angle_rad(rotation)
@@ -384,6 +407,7 @@ class Mechanism:
     
     def copy(self):
         mechanism = Mechanism(self.origin.copy(), self.rotation, links=self.links, connections=[i for i in self.connections], init=False, name=self.name)
+        mechanism.stress_anaylisis = self.stress_anaylisis
         mechanism.translate(self.moved.x, self.moved.y)
         return mechanism
     
@@ -512,7 +536,7 @@ class Mechanism:
 
 
 class SliderCrank:
-    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], offset:float=0, init=True, name=""):
+    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], offset:float=0, init=True, name="", stress_anaylisis:bool=False, dx:float=0):
         """Representation of 4 bar mechanism, must be ordered as follows: a (crank), b (coupler), c (output), d (bench/ground)
            Ground is an optional addition to the links
            connections: numbers indicating the connection points from the links to use"""
@@ -529,7 +553,12 @@ class SliderCrank:
         self.b = links[1].length(connections[1][0], connections[1][1])
         self.c = offset
         self.size = (self.a+self.b)*1.1
+        self.stress_anaylisis = stress_anaylisis
         
+        if stress_anaylisis:
+            assert dx>0, "Requiring a dx>0 for stress analysis"
+            for link in self.links:
+                link.centroid()
         
         #Ground optional
         if len(links) == 3:
@@ -573,6 +602,7 @@ class SliderCrank:
     
     def copy(self):
         slider_crank = SliderCrank(self.origin.copy(), self.rotation, links=self.links, connections=[i for i in self.connections], offset=self.c, init=False, name=self.name)
+        slider_crank.stress_anaylisis = self.stress_anaylisis
         slider_crank.translate(self.moved.x, self.moved.y)
         return slider_crank
     
