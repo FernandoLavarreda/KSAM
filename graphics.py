@@ -212,7 +212,7 @@ if __name__ == "__main__":
     
     if '1' in sys.argv:
         machine = examples.build_machine()
-        plot_rotation_mach(machine, frames=100, inversion=1, save="examples/mass_center.gif", mass_center=True)
+        plot_rotation_mach(machine, frames=100, inversion=1, mass_center=True)
     
     if '2' in sys.argv:
         compresor = examples.build_compresor(5)

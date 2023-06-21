@@ -244,6 +244,8 @@ class Link:
         self.upper = upper
         self.lower = lower
         self.centroid_vector = centroid
+        self.mass = 0
+        self.moment_inertia_centroid  = 0
     
     
     def rotate(self, angle:float):
@@ -301,10 +303,11 @@ class Link:
             self.lower = functions_
     
     
-    def centroid(self, dx:float, tolerance:float=1e-3):
+    def centroid(self, dx:float, density:float, tolerance:float=1e-3):
         """To speed up calculation intesection between curves is not evaluated,
            make sure upper curve is above lower curve throughout the domain
-           centroid must be computed before translating and/or rotating the Link"""
+           centroid must be computed before translating and/or rotating the Link
+           proceed with the calculation of mass and moment of intertia around centroid"""
         if not self.upper or not self.lower:
             raise ValueError("Either lower or upper limits are missing")
         
@@ -327,6 +330,27 @@ class Link:
             position+=dx
         
         self.centroid_vector = Vector(xcoord_numerator/area, ycoord_numerator/area)
+        self.area = area
+        position = dx/2+up_function.start
+        dy = dx
+        darea = dx*dy
+        xo = self.centroid_vector.x
+        yo = self.centroid_vector.y
+        polar_moment_area = 0
+        while position < up_function.end:
+            evaluate_high = up_function(position)
+            evaluate_low = lo_function(position)
+            compute = (evaluate_high-evaluate_low)
+            positiony = evaluate_low+dy/2
+            
+            precom_pute = (position-xo)*(position-xo)
+            while positiony < evaluate_high:
+                polar_moment_area+=darea*(precom_pute+(positiony-yo)*(positiony-yo))
+                positiony+=dy
+            
+            position+=dx
+        self.mass = self.thickness*area*density
+        self.moment_inertia_centroid = self.thickness*polar_moment_area*density
         return self.centroid_vector
     
     
@@ -334,12 +358,14 @@ class Link:
         link = Link(self.origin.copy(), [conn.copy() for conn in self.connections], [c.copy() for c in self.curves], self.thickness, self.name, upper=self.upper[:], lower=self.lower[:])
         if self.centroid_vector:
             link.centroid_vector = self.centroid_vector.copy()
+            link.mass = self.mass
+            link.moment_inertia_centroid = self.moment_inertia_centroid
         return link
 
 
 
 class Mechanism:
-    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], init=True, name="", stress_analysis:bool=False, dx:float=0):
+    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], init=True, name="", stress_analysis:bool=False, dx:float=0, density:float=0):
         """Representation of 4 bar mechanism, must be ordered as follows: a (crank), b (coupler), c (output), d (bench/ground)
            connections: numbers indicating the connection points from the links to use"""
         assert len(connections) == len(links), "Missmatch between connections and links"
@@ -364,8 +390,9 @@ class Mechanism:
         
         if stress_analysis:
             assert dx>0, "Requiring a dx>0 for stress analysis"
+            assert density>0, "Requiring a density>0 for stress analysis"
             for link in self.links:
-                link.centroid(dx)
+                link.centroid(dx, density)
         
         if rotation > 2*pi:
             self.rotation = angle_rad(rotation)
