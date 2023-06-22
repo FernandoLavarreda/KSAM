@@ -525,6 +525,27 @@ class Mechanism:
         return w_crank, w_coupler, w_output, 0
     
     
+    def angular_velocity_angular_acceleration(self, input_rad:float, crank_angular_speed_rad:float, crank_angular_acceleration_rad:float, inversion:int):
+        """Obtain tuples with angular speed and acceleration of each link"""
+        coupler_rad = self.coupler_rad(input_rad)[inversion]
+        output_rad = self.output_rad(input_rad)[inversion]
+        coupler_speed  = crank_angular_speed_rad*self.a/self.b*sin(output_rad-input_rad)/sin(coupler_rad-output_rad)
+        output_speed = crank_angular_speed_rad*self.a/self.c*sin(input_rad-coupler_rad)/sin(output_rad-coupler_rad)
+        
+        A = self.c*sin(output_rad)
+        B = self.b*sin(coupler_rad)
+        C = self.a*crank_angular_acceleration_rad*sin(input_rad)+self.a*crank_angular_speed_rad**2*cos(input_rad)+self.b*coupler_speed**2*cos(coupler_rad)-self.c*output_speed**2*cos(output_rad)
+        D = self.c*cos(output_rad)
+        E = self.b*cos(coupler_rad)
+        F = self.a*crank_angular_acceleration_rad*cos(input_rad)-self.a*crank_angular_speed_rad**2*sin(input_rad)-self.b*coupler_speed**2*sin(coupler_rad)+self.c*output_speed**2*sin(output_rad)
+        
+        coupler_acceleration = (C*D-A*F)/(A*E-B*D)
+        output_acceleration = (C*E-B*F)/(A*E-B*D)
+        ground_speed = 0
+        ground_acceleration = 0
+        return [(crank_angular_speed_rad, crank_angular_acceleration_rad), (coupler_speed, coupler_acceleration), (output_speed, output_acceleration), (ground_speed, ground_acceleration)]
+    
+    
     def solution(self, angle_rad:float):
         """Absolute position given an input angle for crank in radians
            Return value might be: one solution repeated twice, two different solutions
@@ -560,7 +581,7 @@ class Mechanism:
 
 
 class SliderCrank:
-    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], offset:float=0, init=True, name="", stress_analysis:bool=False, dx:float=0):
+    def __init__(self, origin:Vector, rotation:float, links:List[Link], connections:List[Tuple[int, int]], offset:float=0, init=True, name="", stress_analysis:bool=False, dx:float=0, density:float=0):
         """Representation of 4 bar mechanism, must be ordered as follows: a (crank), b (coupler), c (output), d (bench/ground)
            Ground is an optional addition to the links
            connections: numbers indicating the connection points from the links to use"""
@@ -581,6 +602,7 @@ class SliderCrank:
         
         if stress_analysis:
             assert dx>0, "Requiring a dx>0 for stress analysis"
+            assert density>0, "Requiring a density>0 for stress analysis"
             for link in self.links:
                 link.centroid()
         
@@ -694,6 +716,20 @@ class SliderCrank:
         w_crank = (input_rad2-input_rad1)/dt
         w_coupler = (self.coupler_rad(input_rad2)[inversion]-self.coupler_rad(input_rad1)[inversion])/dt 
         return w_crank, w_coupler, 0, 0
+    
+    
+    def angular_velocity_angular_acceleration(self, input_rad:float, crank_angular_speed_rad:float, crank_angular_acceleration_rad:float, inversion:int):
+        """Obtain tuples with angular speed and acceleration of each link
+           For output it is linear velocity and acceleration since the slider has no rotation"""
+        coupler_rad = self.coupler_rad(input_rad)[inversion]
+        coupler_speed  = crank_angular_speed_rad*self.a/self.b*cos(input_rad)/cos(coupler_rad)
+        output_speed = -self.a*crank_angular_speed_rad*sin(input_rad)+self.b*coupler_speed*sin(coupler_rad)
+        
+        coupler_acceleration = (self.a*crank_angular_acceleration_rad*cos(input_rad)-self.a*crank_angular_speed_rad**2*sin(input_rad)+self.b*coupler_speed**2*sin(coupler_rad))/(self.b*cos(coupler_rad))
+        output_acceleration = -self.a*crank_angular_acceleration_rad*sin(input_rad)-self.a*crank_angular_speed_rad**2*cos(input_rad)+self.b*coupler_acceleration*sin(coupler_rad)+self.b*coupler_speed**2*cos(coupler_rad)
+        ground_speed = 0
+        ground_acceleration = 0
+        return [(crank_angular_speed_rad, crank_angular_acceleration_rad), (coupler_speed, coupler_acceleration), (output_speed, output_acceleration), (ground_speed, ground_acceleration)]
     
     
     def solution(self, angle_rad:float):

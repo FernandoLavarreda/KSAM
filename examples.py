@@ -38,7 +38,7 @@ def build_machine():
     link4.set_lims([2,], 1)
     link4.set_lims([0,1], 0)
     
-    mech = gm.Mechanism(gm.Vector(0, 0), -0.2*gm.pi, [link, link2, link3, link4], ((0, 1), (0, 1), (0, 1), (0, 1)), stress_analysis=True, dx=1e-6, density=1)
+    mech = gm.Mechanism(gm.Vector(0, 0), -0.2*gm.pi, [link, link2, link3, link4], ((0, 1), (0, 1), (0, 1), (0, 1)), stress_analysis=True, dx=1e-3, density=1)
     
     mech2 = mech.copy()
     mech2.rotate(0.2*gm.pi)
