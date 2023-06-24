@@ -167,30 +167,36 @@ def build_double_crank(pistons:int):
 
 
 if __name__ == "__main__":
-    #See centroid of Link
-    c1 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/20, (x/20)**2) for x in range(11)], function=gm.Function(start=0, end=0.5, process=lambda x: x**2))
-    c2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/20, (x/20-1)**2) for x in range(10, 21)], function=gm.Function(start=0.5, end=1, process=lambda x: (x-1)**2))
-    c3 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(1, 0)], function=gm.Function(start=0, end=1, process=lambda x: 0))
-    link = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(1, 0)], [c1, c2, c3], 1)
-    link.set_lims([0, 1], 1)
-    link.set_lims([2,], 0)
-    print(link.centroid(dx=1e-4, density=1e3))
-    print("Mass:", link.mass)
-    print("Moment inertia:", link.moment_inertia_centroid)
+    #Test forces, speeds
+    import sys
     
-    half_circle = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/20, (x/20)**2) for x in range(40)], function=gm.Function(start=0, end=2, process=lambda x: (1-(x-1)**2)**0.5))
-    half_circle2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/20, (x/20-1)**2) for x in range(10, 21)], function=gm.Function(start=0, end=2, process=lambda x: -(1-(x-1)**2)**0.5))
-    link = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(1, 0)], [half_circle, half_circle2], 1)
-    link.set_lims([0,], 1)
-    link.set_lims([1,], 0)
-    print(link.centroid(dx=1e-4, density=1e3))
-    print("Mass:", link.mass)
-    print("Moment inertia:", link.moment_inertia_centroid)
+    if '1' in sys.argv:
+        print("Calculting centroid, mass and moment of inertia from 'machine' crank")
+        c1 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/20, (x/20)**2) for x in range(11)], function=gm.Function(start=0, end=0.5, process=lambda x: x**2))
+        c2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/20, (x/20-1)**2) for x in range(10, 21)], function=gm.Function(start=0.5, end=1, process=lambda x: (x-1)**2))
+        c3 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(1, 0)], function=gm.Function(start=0, end=1, process=lambda x: 0))
+        link = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(1, 0)], [c1, c2, c3], 1)
+        link.set_lims([0, 1], 1)
+        link.set_lims([2,], 0)
+        print(link.centroid(dx=1e-4, density=1e3))
+        print("Mass:", link.mass)
+        print("Moment inertia:", link.moment_inertia_centroid)
     
+    if '2' in sys.argv:
+        print("Calculting centroid, mass and moment of inertia from disc")
+        half_circle = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/20, (x/20)**2) for x in range(40)], function=gm.Function(start=0, end=2, process=lambda x: (1-(x-1)**2)**0.5))
+        half_circle2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/20, (x/20-1)**2) for x in range(10, 21)], function=gm.Function(start=0, end=2, process=lambda x: -(1-(x-1)**2)**0.5))
+        link = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(1, 0)], [half_circle, half_circle2], 1)
+        link.set_lims([0,], 1)
+        link.set_lims([1,], 0)
+        print(link.centroid(dx=1e-4, density=1e3))
+        print("Mass:", link.mass)
+        print("Moment inertia:", link.moment_inertia_centroid)
     
-    #Evaluate angular velocity of Machine
-    #cm = build_compresor(3)
-    #print(cm.angular_velocity(0, gm.pi/2, 1))
+    if '3' in sys.argv:
+        print("Calculating accelerations for 'machine'")
+        machine = build_machine()
+        print(machine.solution_forces(0.2*gm.pi, 0.2, 1, pattern=1))
     
     
 

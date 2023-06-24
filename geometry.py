@@ -851,7 +851,131 @@ class Machine:
                 solutions[mechanism_] = self.mechanisms[mechanism_-1].output_rad(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]+self.mechanisms[mechanism_-1].rotation
         
         return snapshot
-
+    
+    
+    def solution_forces(self, angle_rad:float, speed_rad:float, acceleration_rad:float, pattern:list=0):
+        assert all([m.stress_analysis for m in self.mechanisms]), "All mechanisms must have a centroid and mass to find the forces"
+        
+        inversions = None
+        solutions = [0 for i in range(len(self.mechanisms)+1)]
+        accelerations = [[] for i in range(len(self.mechanisms)+1)]
+        if type(pattern) == list:
+            inversions = pattern
+        elif pattern:
+            inversions = [1 for i in range(len(self.mechanisms))]
+        else:
+            inversions = [0 for i in range(len(self.mechanisms))]
+        
+        snapshot = []
+        sorting = topological_sort(self.power_graph)
+        solutions[0] = self.mechanisms[0].rotation+angle_rad
+        accelerations[0] = ((speed_rad, acceleration_rad), (speed_rad, acceleration_rad), (speed_rad, acceleration_rad), (speed_rad, acceleration_rad))
+        linear_and_angular_accelerations = []
+        counter = 1
+        for mechanism_ in sorting[1:]:
+            n_solution = self.mechanisms[mechanism_-1].solution(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]
+            n_acceleration = self.mechanisms[mechanism_-1].angular_velocity_angular_acceleration(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation,\
+                                                                                                 accelerations[self.input_graph[mechanism_]][2][0], accelerations[self.input_graph[mechanism_]][2][1], inversions[mechanism_-1])
+            accelerations[mechanism_] = n_acceleration
+            snapshot.append(n_solution)
+            if self.power_graph[mechanism_]:
+                solutions[mechanism_] = self.mechanisms[mechanism_-1].output_rad(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]+self.mechanisms[mechanism_-1].rotation
+            
+            
+            #Linear accelerations
+            mechanism_analyzed = self.mechanisms[mechanism_-1]
+            #Crank linear accelerations
+            radius_connection_to_centroid = n_solution[0].connections[mechanism_analyzed.connections[0][0]]-n_solution[0].centroid_vector
+            w2 = n_acceleration[0][0]*n_acceleration[0][0]
+            ax = radius_connection_to_centroid.x*w2
+            ay = radius_connection_to_centroid.y*w2
+            
+            if n_acceleration[0][1]>0:
+                radius_connection_to_centroid.rotate(-pi/2)
+            else:
+                radius_connection_to_centroid.rotate(pi/2)
+            ax+=radius_connection_to_centroid.x*abs(n_acceleration[0][1])
+            ay+=radius_connection_to_centroid.y*abs(n_acceleration[0][1])
+            
+            
+            #Coupler and output linear accelerations Mechanism
+            if type(mechanism_analyzed) == Mechanism:
+                radius_connection_to_centroid = n_solution[0].connections[mechanism_analyzed.connections[0][1]]-n_solution[1].centroid_vector
+                w2_cop = n_acceleration[1][0]*n_acceleration[1][0]
+                ax_cop = radius_connection_to_centroid.x*w2_cop
+                ay_cop = radius_connection_to_centroid.y*w2_cop
+                
+                if n_acceleration[1][1]>0:
+                    radius_connection_to_centroid.rotate(-pi/2)
+                else:
+                    radius_connection_to_centroid.rotate(pi/2)
+                ax_cop+=radius_connection_to_centroid.x*abs(n_acceleration[1][1])
+                ay_cop+=radius_connection_to_centroid.y*abs(n_acceleration[1][1])
+                
+                # Translate relative velocity into absolute
+                # The relative velocity is in terms of the connection point from crank not from the centroid, so acceleration for this point needs to be computed
+                radius_connection_to_centroid = n_solution[0].connections[mechanism_analyzed.connections[0][0]]-n_solution[0].connections[mechanism_analyzed.connections[0][1]]
+                ax_conn = radius_connection_to_centroid.x*w2
+                ay_conn = radius_connection_to_centroid.y*w2
+                
+                if n_acceleration[0][1]>0:
+                    radius_connection_to_centroid.rotate(-pi/2)
+                else:
+                    radius_connection_to_centroid.rotate(pi/2)
+                ax_conn+=radius_connection_to_centroid.x*abs(n_acceleration[0][1])
+                ay_conn+=radius_connection_to_centroid.y*abs(n_acceleration[0][1])
+                
+                ax_cop+=ax_conn
+                ay_cop+=ay_conn
+                
+                #Output
+                radius_connection_to_centroid = n_solution[3].connections[mechanism_analyzed.connections[3][1]]-n_solution[2].centroid_vector
+                w2_out = n_acceleration[2][0]*n_acceleration[2][0]
+                ax_out = radius_connection_to_centroid.x*w2_out
+                ay_out = radius_connection_to_centroid.y*w2_out
+                
+                if n_acceleration[2][1]>0:
+                    radius_connection_to_centroid.rotate(-pi/2)
+                else:
+                    radius_connection_to_centroid.rotate(pi/2)
+                ax_out+=radius_connection_to_centroid.x*abs(n_acceleration[2][1])
+                ay_out+=radius_connection_to_centroid.y*abs(n_acceleration[2][1])
+                
+                
+            
+            #Coupler and output linear accelerations SliderCrank
+            elif type(mechanism_analyzed) == SliderCrank:
+                radius_connection_to_centroid = n_solution[1].connections[mechanism_analyzed.connections[1][1]]-n_solution[1].centroid_vector
+                w2_cop = n_acceleration[1][0]*n_acceleration[1][0]
+                ax_cop = radius_connection_to_centroid*w2_cop
+                ay_cop = radius_connection_to_centroid*w2_cop
+                
+                if n_acceleration[1][1]>0:
+                    radius_connection_to_centroid.rotate(-pi/2)
+                else:
+                    radius_connection_to_centroid.rotate(pi/2)
+                ax_cop+=radius_connection_to_centroid.x*abs(n_acceleration[1][1])
+                ay_cop+=radius_connection_to_centroid.y*abs(n_acceleration[1][1])
+                
+                # Translate relative velocity into absolute
+                # Use as reference velocity from output since slider has to be naturally computed and corresponds to the reference point for the SliderCrank coupler
+                direction = n_solution[3].connections[mechanism_analyzed.connections[3][1]]-n_solution[3].connections[mechanism_analyzed.connections[3][0]]
+                normalize_x = direction.x/((direction.x**2+direction.y**2)**0.5)
+                normalize_y = direction.y/((direction.x**2+direction.y**2)**0.5)
+                
+                ax_out = normalize_x*n_acceleration[2][1]
+                ay_out = normalize_y*n_acceleration[2][1]
+                ax_cop+=ax_out
+                ay_cop+=ay_out
+                
+            else:
+                raise ValueError(f"type '{type(mechanism_analyzed)}' has not defined linear accelerations")
+            
+            #ax, ay and angular acceleration for each link in each mechanism
+            linear_and_angular_accelerations.append([[ax, ay, n_acceleration[0][1]], [ax_cop, ay_cop, n_acceleration[1][1]], [ax_out, ay_out, n_acceleration[2][1]], [0, 0, 0]])
+        return linear_and_angular_accelerations
+    
+    
 
 def topological_sort(mechanisms:List[List[int]]):
     found = []
