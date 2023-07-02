@@ -1,7 +1,9 @@
 #Fernando Jose Lavarreda Urizar
 #Program to analyze Mechanisms, Graduation Project UVG
 
-
+import numpy as np
+import elementos as fea
+import numpy.linalg as linag
 from typing import List, Tuple, Mapping, Callable
 from math import sin, cos, pi, sqrt, atan, atan2, asin
 
@@ -246,6 +248,10 @@ class Link:
         self.centroid_vector = centroid
         self.mass = 0
         self.moment_inertia_centroid  = 0
+        self.element_node_locations = [] #List[Vector] indicating the centroid for each element for Finite Element Analysis
+        self.areas = []
+        self.inertias = []
+        self.connection_nodes = []  #Index of FEA nodes closest to the connections in the 'x' axis for boundary conditions (Fixed, only rotation, only movement in one axis)
     
     
     def rotate(self, angle:float):
@@ -254,10 +260,13 @@ class Link:
         
         for conn in self.connections:
             conn.rotate(angle)
-        self.rotation+=angle
         
         if self.centroid_vector:
             self.centroid_vector.rotate(angle)
+            for v in self.element_node_locations:
+                v.rotate(angle)
+        
+        self.rotation+=angle
     
     
     def rotate_angle(self, angle:float):
@@ -270,10 +279,13 @@ class Link:
         
         for conn in self.connections:
             conn.translate(x, y)
-        self.translation+=Vector(x, y)
         
         if self.centroid_vector:
             self.centroid_vector.translate(x, y)
+            for v in self.element_node_locations:
+                v.translate(x, y)
+        
+        self.translation+=Vector(x, y)
     
     
     def absolute(self):
@@ -315,6 +327,10 @@ class Link:
         lo_function = concatenate_functions(self.lower)
         if abs(up_function.start-lo_function.start)>tolerance or abs(up_function.end-lo_function.end)>tolerance:
             raise ValueError("End and start of functions defining the upper and lower bounds is greater than tolerance accepeted")
+        self.element_node_locations = []
+        self.areas = []
+        self.inertias = []
+        self.connection_nodes = []
         area = 0
         position = dx/2+up_function.start
         ycoord_numerator = 0
@@ -327,7 +343,18 @@ class Link:
             y_centroid = (evaluate_high-evaluate_low)/2+evaluate_low
             xcoord_numerator+=position*compute
             ycoord_numerator+=y_centroid*compute
+            
+            self.element_node_locations.append(Vector(position, y_centroid))
+            self.areas.append(self.thickness*(evaluate_high-evaluate_low))
+            self.inertias.append(self.thickness/12*(evaluate_high-evaluate_low)*(evaluate_high-evaluate_low)*(evaluate_high-evaluate_low)) #Second moment of area
             position+=dx
+        
+        for connection in self.connections:
+            node = int((connection.x-(dx/2+up_function.start))/dx)+1
+            if node==len(self.connection_nodes):
+                node -= 1 
+            self.connection_nodes.append(node)
+            
         
         self.centroid_vector = Vector(xcoord_numerator/area, ycoord_numerator/area)
         self.area = area
@@ -360,6 +387,10 @@ class Link:
             link.centroid_vector = self.centroid_vector.copy()
             link.mass = self.mass
             link.moment_inertia_centroid = self.moment_inertia_centroid
+            link.element_node_locations = [i.copy() for i in self.element_node_locations]
+            link.areas = self.areas[:]
+            link.inertias = self.inertias[:]
+            link.connection_nodes = self.connection_nodes[:]
         return link
 
 
@@ -853,7 +884,7 @@ class Machine:
         return snapshot
     
     
-    def solution_forces(self, angle_rad:float, speed_rad:float, acceleration_rad:float, pattern:list=0):
+    def solution_accelerations(self, angle_rad:float, speed_rad:float, acceleration_rad:float, pattern:list=0):
         assert all([m.stress_analysis for m in self.mechanisms]), "All mechanisms must have a centroid and mass to find the forces"
         
         inversions = None
@@ -973,7 +1004,56 @@ class Machine:
             
             #ax, ay and angular acceleration for each link in each mechanism
             linear_and_angular_accelerations.append([[ax, ay, n_acceleration[0][1]], [ax_cop, ay_cop, n_acceleration[1][1]], [ax_out, ay_out, n_acceleration[2][1]], [0, 0, 0]])
+            """
+            force_matrix = np.array([\
+                                      [1, 0, 1, 0, 0, 0, 0, 0, 0],\
+                                      [0, 1, 0, 1, 0, 0, 0, 0, 0],\
+                                      [-(n_solution[0].connections[mechanism_analyzed.connections[0][0]]-n_solution[0].centroid_vector).y, (n_solution[0].connections[mechanism_analyzed.connections[0][0]]-n_solution[0].centroid_vector).x, -(n_solution[0].connections[mechanism_analyzed.connections[0][1]]-n_solution[0].centroid_vector).y, (n_solution[0].connections[mechanism_analyzed.connections[0][1]]-n_solution[0].centroid_vector).x, 0, 0, 0, 0, 1],\
+                                      [0, 0, -1, 0, 1, 0, 0, 0, 0],\
+                                      [0, 0, 0, -1, 0, 1, 0, 0, 0],\
+                                      [0, 0, (n_solution[0].connections[mechanism_analyzed.connections[0][1]]-n_solution[1].centroid_vector).y, -(n_solution[0].connections[mechanism_analyzed.connections[0][1]]-n_solution[1].centroid_vector).x, -(n_solution[1].connections[mechanism_analyzed.connections[1][1]]-n_solution[1].centroid_vector).y, (n_solution[1].connections[mechanism_analyzed.connections[1][1]]-n_solution[1].centroid_vector).x, 0, 0, 0],\
+                                      [0, 0, 0, 0, -1, 0, 1, 0, 0],\
+                                      [0, 0, 0, 0, 0, -1, 0, 1, 0],\
+                                      [0, 0, 0, 0, (n_solution[1].connections[mechanism_analyzed.connections[1][1]]-n_solution[2].centroid_vector).y, -(n_solution[1].connections[mechanism_analyzed.connections[1][1]]-n_solution[2].centroid_vector).x, -(n_solution[2].connections[mechanism_analyzed.connections[2][1]]-n_solution[2].centroid_vector).y, (n_solution[2].connections[mechanism_analyzed.connections[2][1]]-n_solution[2].centroid_vector).x, 0]\
+                                    ])
+            
+            mass_x_accelerations = np.array([\
+                                             [n_solution[0].mass*ax],\
+                                             [n_solution[0].mass*ay],\
+                                             [n_solution[0].moment_inertia_centroid*n_acceleration[0][1]],\
+                                             [n_solution[1].mass*ax_cop],\
+                                             [n_solution[1].mass*ay_cop],\
+                                             [n_solution[1].moment_inertia_centroid*n_acceleration[1][1]],\
+                                             [n_solution[2].mass*ax_out],\
+                                             [n_solution[2].mass*ay_out],\
+                                             [n_solution[2].moment_inertia_centroid*n_acceleration[2][1]]\
+                                            ])
+            """
         return linear_and_angular_accelerations
+    
+    
+    def solution_stress(self):
+        inversions = None
+        solutions = [0 for i in range(len(self.mechanisms)+1)]
+        if type(pattern) == list:
+            inversions = pattern
+        elif pattern:
+            inversions = [1 for i in range(len(self.mechanisms))]
+        else:
+            inversions = [0 for i in range(len(self.mechanisms))]
+        
+        snapshot = []
+        
+        sorting = topological_sort(self.power_graph)
+        solutions[0] = self.mechanisms[0].rotation+angle_rad
+        counter = 1
+        for mechanism_ in sorting[1:]:
+            n_solution = self.mechanisms[mechanism_-1].solution(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]
+            snapshot.append(n_solution)
+            if self.power_graph[mechanism_]:
+                solutions[mechanism_] = self.mechanisms[mechanism_-1].output_rad(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]+self.mechanisms[mechanism_-1].rotation
+        
+        return snapshot
     
     
 
