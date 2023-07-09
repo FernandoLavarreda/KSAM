@@ -1075,11 +1075,11 @@ class Machine:
                     forcey = final_forces_[current][link_*2+3][0]
                     move_force = link.element_node_locations[i]-self.mechanisms[current].links[link_].connections[self.mechanisms[current].connections[link_][0]]
                     
-                    moment = forcex*move_force.y-forcey*move_force.x
+                    moment = forcex*move_force.y-forcey*move_force.x+final_forces_[current][-1][0]
                     c = cos(absolute_rotations[current][link_])
                     s = sin(absolute_rotations[current][link_])
-                    local_x = forcex*c-forcey*s
-                    local_y = forcex*s+forcey*c
+                    local_x = forcex*c+forcey*s
+                    local_y = -forcex*s+forcey*c
                     
                     moment_stress = moment*link.heights[i]/link.inertias[i]
                     shear_stress = local_y/link.areas[i]
