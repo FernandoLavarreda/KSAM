@@ -2,8 +2,7 @@
 #Program to analyze Mechanisms, Graduation Project UVG
 
 import numpy as np
-import elementos as fea
-import numpy.linalg as linag
+import numpy.linalg as linalg
 from typing import List, Tuple, Mapping, Callable
 from math import sin, cos, pi, sqrt, atan, atan2, asin
 
@@ -251,7 +250,7 @@ class Link:
         self.element_node_locations = [] #List[Vector] indicating the centroid for each element for Finite Element Analysis
         self.areas = []
         self.inertias = []
-        self.connection_nodes = []  #Index of FEA nodes closest to the connections in the 'x' axis for boundary conditions (Fixed, only rotation, only movement in one axis)
+        self.heights = [] #Heights for each node being analyzed, required for stresses due to momentum (Mc/I )
     
     
     def rotate(self, angle:float):
@@ -330,7 +329,7 @@ class Link:
         self.element_node_locations = []
         self.areas = []
         self.inertias = []
-        self.connection_nodes = []
+        self.heights = []
         area = 0
         position = dx/2+up_function.start
         ycoord_numerator = 0
@@ -343,17 +342,12 @@ class Link:
             y_centroid = (evaluate_high-evaluate_low)/2+evaluate_low
             xcoord_numerator+=position*compute
             ycoord_numerator+=y_centroid*compute
-            
+            self.heights.append((evaluate_high-evaluate_low)/2)
             self.element_node_locations.append(Vector(position, y_centroid))
             self.areas.append(self.thickness*(evaluate_high-evaluate_low))
             self.inertias.append(self.thickness/12*(evaluate_high-evaluate_low)*(evaluate_high-evaluate_low)*(evaluate_high-evaluate_low)) #Second moment of area
             position+=dx
         
-        for connection in self.connections:
-            node = int((connection.x-(dx/2+up_function.start))/dx)+1
-            if node==len(self.connection_nodes):
-                node -= 1 
-            self.connection_nodes.append(node)
             
         
         self.centroid_vector = Vector(xcoord_numerator/area, ycoord_numerator/area)
@@ -390,7 +384,7 @@ class Link:
             link.element_node_locations = [i.copy() for i in self.element_node_locations]
             link.areas = self.areas[:]
             link.inertias = self.inertias[:]
-            link.connection_nodes = self.connection_nodes[:]
+            link.heights = self.heights[:]
         return link
 
 
@@ -884,8 +878,10 @@ class Machine:
         return snapshot
     
     
-    def solution_accelerations(self, angle_rad:float, speed_rad:float, acceleration_rad:float, pattern:list=0):
+    def solution_kinetics(self, angle_rad:float, speed_rad:float, acceleration_rad:float, external_moments:List[float], pattern:list=0):
         assert all([m.stress_analysis for m in self.mechanisms]), "All mechanisms must have a centroid and mass to find the forces"
+        assert len(external_moments) == len(self.mechanisms) or len(external_moments) == 1, "Must provide an external moment for each mechanism or just for the last one"
+        assert all([type(m) == Mechanism for m in self.mechanisms]), "Stresses have only been implemented to four link-pin mechanisms. No SliderCrank, nor any other type"
         
         inversions = None
         solutions = [0 for i in range(len(self.mechanisms)+1)]
@@ -902,12 +898,24 @@ class Machine:
         solutions[0] = self.mechanisms[0].rotation+angle_rad
         accelerations[0] = ((speed_rad, acceleration_rad), (speed_rad, acceleration_rad), (speed_rad, acceleration_rad), (speed_rad, acceleration_rad))
         linear_and_angular_accelerations = []
-        counter = 1
+        
+        # Saved because external moment is applied to last mechanism's output
+        # So its reaction is applied to output of the mechanism that dirves it
+        solution_forces_ = [[],]
+        solution_accelerations_ = [[],]
+        final_forces_ = []
+        #
+        #Important to save rotations of links so that stresses can be determined
+        absolute_rotations = []
+        #
         for mechanism_ in sorting[1:]:
             n_solution = self.mechanisms[mechanism_-1].solution(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]
             n_acceleration = self.mechanisms[mechanism_-1].angular_velocity_angular_acceleration(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation,\
                                                                                                  accelerations[self.input_graph[mechanism_]][2][0], accelerations[self.input_graph[mechanism_]][2][1], inversions[mechanism_-1])
             accelerations[mechanism_] = n_acceleration
+            absolute_rotations.append((solutions[self.input_graph[mechanism_]]+self.mechanisms[mechanism_-1].rotation,\
+                                            self.mechanisms[mechanism_-1].coupler_rad(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]+self.mechanisms[mechanism_-1].rotation,\
+                                            self.mechanisms[mechanism_-1].output_rad(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]+self.mechanisms[mechanism_-1].rotation))
             snapshot.append(n_solution)
             if self.power_graph[mechanism_]:
                 solutions[mechanism_] = self.mechanisms[mechanism_-1].output_rad(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]+self.mechanisms[mechanism_-1].rotation
@@ -1004,7 +1012,8 @@ class Machine:
             
             #ax, ay and angular acceleration for each link in each mechanism
             linear_and_angular_accelerations.append([[ax, ay, n_acceleration[0][1]], [ax_cop, ay_cop, n_acceleration[1][1]], [ax_out, ay_out, n_acceleration[2][1]], [0, 0, 0]])
-            """
+            
+            
             force_matrix = np.array([\
                                       [1, 0, 1, 0, 0, 0, 0, 0, 0],\
                                       [0, 1, 0, 1, 0, 0, 0, 0, 0],\
@@ -1028,32 +1037,63 @@ class Machine:
                                              [n_solution[2].mass*ay_out],\
                                              [n_solution[2].moment_inertia_centroid*n_acceleration[2][1]]\
                                             ])
-            """
-        return linear_and_angular_accelerations
-    
-    
-    def solution_stress(self):
-        inversions = None
-        solutions = [0 for i in range(len(self.mechanisms)+1)]
-        if type(pattern) == list:
-            inversions = pattern
-        elif pattern:
-            inversions = [1 for i in range(len(self.mechanisms))]
+            
+            solution_accelerations_.append(mass_x_accelerations)
+            solution_forces_.append(force_matrix)
+            #print(linalg.solve(force_matrix, mass_x_accelerations))
+        
+        external_moments_ = []
+        if len(external_moments) == 1:
+            for i in range(len(self.mechanisms)):
+                external_moments_.append(0)
+            external_moments_[-1] = external_moments[0]
         else:
-            inversions = [0 for i in range(len(self.mechanisms))]
+            external_moments_ = external_moments
         
-        snapshot = []
+        for matrix in sorting[::-1][:-1]:
+            solution_accelerations_[matrix][-1][0] -= external_moments_[matrix-1]
+            solution = linalg.solve(solution_forces_[matrix], solution_accelerations_[matrix])
+            final_forces_.append(solution)
+            if self.input_graph[matrix] != 0:
+                solution_accelerations_[self.input_graph[matrix]][-1][0]-=solution[-1][0]
+        final_forces_ = final_forces_[::-1]
+        final_stresses_ = []
+        vonMises_ = []
         
-        sorting = topological_sort(self.power_graph)
-        solutions[0] = self.mechanisms[0].rotation+angle_rad
-        counter = 1
-        for mechanism_ in sorting[1:]:
-            n_solution = self.mechanisms[mechanism_-1].solution(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]
-            snapshot.append(n_solution)
-            if self.power_graph[mechanism_]:
-                solutions[mechanism_] = self.mechanisms[mechanism_-1].output_rad(solutions[self.input_graph[mechanism_]]-self.mechanisms[mechanism_-1].rotation)[inversions[mechanism_-1]]+self.mechanisms[mechanism_-1].rotation
-        
-        return snapshot
+        #Stresses only for the crank of the first mechanism, all others are powered by the output
+        include_crank = 0
+        current = 0
+        for mechanism in snapshot:
+            link_ = 0
+            max_vonMises = 0
+            stresses = []
+            for link in mechanism[include_crank:-1]:
+                for i in range(len(link.element_node_locations)):
+                    if link.areas[i]<=1e-4:
+                        continue
+                    forcex = final_forces_[current][link_*2+2][0]
+                    forcey = final_forces_[current][link_*2+3][0]
+                    move_force = link.element_node_locations[i]-self.mechanisms[current].links[link_].connections[self.mechanisms[current].connections[link_][0]]
+                    
+                    moment = forcex*move_force.y-forcey*move_force.x
+                    c = cos(absolute_rotations[current][link_])
+                    s = sin(absolute_rotations[current][link_])
+                    local_x = forcex*c-forcey*s
+                    local_y = forcex*s+forcey*c
+                    
+                    moment_stress = moment*link.heights[i]/link.inertias[i]
+                    shear_stress = local_y/link.areas[i]
+                    normal_stress = local_x/link.areas[i]
+                    vonMises = (normal_stress*normal_stress+3*shear_stress*shear_stress)**0.5
+                    if vonMises>max_vonMises:
+                        max_vonMises = vonMises
+                        stresses = [shear_stress, normal_stress, moment_stress]
+                link_+=1
+                final_stresses_.append(stresses)
+                vonMises_.append(max_vonMises)
+            include_crank = 1
+            current+=1
+        return linear_and_angular_accelerations, final_forces_, final_stresses_, vonMises_
     
     
 
