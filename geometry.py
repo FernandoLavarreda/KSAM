@@ -1059,15 +1059,16 @@ class Machine:
         final_forces_ = final_forces_[::-1]
         final_stresses_ = []
         vonMises_ = []
-        
+        locations_ = []
         #Stresses only for the crank of the first mechanism, all others are powered by the output
         include_crank = 0
         current = 0
         for mechanism in snapshot:
             link_ = 0
-            max_vonMises = 0
             stresses = []
+            location = None
             for link in mechanism[include_crank:-1]:
+                max_vonMises = 0
                 for i in range(len(link.element_node_locations)):
                     if link.areas[i]<=1e-4:
                         continue
@@ -1084,16 +1085,22 @@ class Machine:
                     moment_stress = moment*link.heights[i]/link.inertias[i]
                     shear_stress = local_y/link.areas[i]
                     normal_stress = local_x/link.areas[i]
-                    vonMises = (normal_stress*normal_stress+3*shear_stress*shear_stress)**0.5
+                    total_normal_stress = abs(normal_stress)+abs(moment_stress)
+                    vonMises = (total_normal_stress*total_normal_stress+3*shear_stress*shear_stress)**0.5
                     if vonMises>max_vonMises:
                         max_vonMises = vonMises
                         stresses = [shear_stress, normal_stress, moment_stress]
+                        if (moment_stress > 0 and normal_stress > 0) or (moment_stress < 0 and normal_stress < 0):
+                            location = Vector(s*link.heights[i], -c*link.heights[i])+link.element_node_locations[i]
+                        else:
+                            location = Vector(-s*link.heights[i], c*link.heights[i])+link.element_node_locations[i]
                 link_+=1
                 final_stresses_.append(stresses)
                 vonMises_.append(max_vonMises)
+                locations_.append(location)
             include_crank = 1
             current+=1
-        return linear_and_angular_accelerations, final_forces_, final_stresses_, vonMises_
+        return linear_and_angular_accelerations, final_forces_, final_stresses_, vonMises_, locations_
     
     
 

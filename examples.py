@@ -20,10 +20,10 @@ def build_machine():
     bc3 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(2, 0)], function=gm.Function(start=0, end=2, process=lambda x: 0))
 
 
-    link = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(1, 0)], [c1, c2, c3], thickness=1.0)
-    link2 = gm.Link(gm.Vector(0, 0), [gm.Vector(0.5, 1.25), gm.Vector(0.5, -1.25)], [hc1.copy(), hc2.copy(), jcurve.copy(), jcurve2.copy()], thickness=1.0)
-    link3 = gm.Link(gm.Vector(0, 0), [gm.Vector(0.5, 1.25), gm.Vector(0.5, -1.25)], [hc1, hc2, jcurve, jcurve2], thickness=1.0)
-    link4 = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(2, 0)], [bc1, bc2, bc3], thickness=1.0)
+    link = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(1, 0)], [c1, c2, c3], thickness=0.1)
+    link2 = gm.Link(gm.Vector(0, 0), [gm.Vector(0.5, 1.25), gm.Vector(0.5, -1.25)], [hc1.copy(), hc2.copy(), jcurve.copy(), jcurve2.copy()], thickness=0.1)
+    link3 = gm.Link(gm.Vector(0, 0), [gm.Vector(0.5, 1.25), gm.Vector(0.5, -1.25)], [hc1, hc2, jcurve, jcurve2], thickness=0.1)
+    link4 = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(2, 0)], [bc1, bc2, bc3], thickness=0.1)
     
     #Centroid calculations
     link.set_lims([0, 1], 1)
@@ -196,7 +196,11 @@ if __name__ == "__main__":
     if '3' in sys.argv:
         print("Calculating accelerations for 'machine'")
         machine = build_machine()
-        print(machine.solution_kinetics(1.8*gm.pi, 0.2, 1, [8, 1, 4,], pattern=1))
+        accelerations, forces, stresses, vonMises, locations = machine.solution_kinetics(1.8*gm.pi, 0.2, 1, [1,], pattern=1)
+        print(f"Accelerations: {accelerations}\nForces: {forces}\nStresses: {stresses}\nvon Mises: {vonMises}")
+        print("Locations:")
+        for i in locations:
+            print(i)
     
     
 
