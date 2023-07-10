@@ -28,7 +28,7 @@ def plot_link(link:gm.Link):
 
 
 
-def plot_mechanism(crank:gm.Link, coupler:gm.Link, output:gm.Link, ground:gm.Link, axes:Axes=None):
+def plot_mechanism(crank:gm.Link, coupler:gm.Link, output:gm.Link, ground:gm.Link, axes:Axes=None, colors=["red", "purple", "green", "orange", "blue", "black", "yellow"]):
     links = [crank, coupler, output, ground]
     
     if axes:
@@ -37,10 +37,11 @@ def plot_mechanism(crank:gm.Link, coupler:gm.Link, output:gm.Link, ground:gm.Lin
         fig = plt.figure()
         ax = fig.add_subplot(111)
     
-    
+    color=0
     for link in links:
         for curve in link.curves:
-            ax.plot([vector.x for vector in curve.vectors], [vector.y for vector in curve.vectors])
+            ax.plot([vector.x for vector in curve.vectors], [vector.y for vector in curve.vectors], color=colors[color%len(colors)])
+        color+=1
     miny, maxy = ax.get_ylim()
     minx, maxx = ax.get_xlim()
     
@@ -54,17 +55,30 @@ def plot_mechanism(crank:gm.Link, coupler:gm.Link, output:gm.Link, ground:gm.Lin
         plt.show()
 
 
-def plot_machine(mechanisms:List[List[gm.Link]], axes:Axes=None):
+def plot_machine(mechanisms:List[List[gm.Link]], axes:Axes=None, colors=["red", "purple", "green", "orange", "blue", "black", "yellow"], mass_center:bool=False, max_stress:List[gm.Vector]=[]):
+    if mass_center:
+        for jindex, m in enumerate(mechanisms):
+            for index, l in enumerate(m):
+                assert l.centroid_vector, f"Missing centroid for link {index} in mechanism {jindex}"
+    
     if axes:
         ax = axes
     else:
         fig = plt.figure()
         ax = fig.add_subplot(111)
     
+    color = 0
+    omit_crank = 0
     for mechanism in mechanisms:
-        for link in mechanism:
+        for link in mechanism[omit_crank:]:
             for curve in link.curves:
-                ax.plot([vector.x for vector in curve.vectors], [vector.y for vector in curve.vectors])
+                ax.plot([vector.x for vector in curve.vectors], [vector.y for vector in curve.vectors], color=colors[color%len(colors)])
+            color+=1
+            if mass_center:
+                ax.scatter([link.centroid_vector.x,], [link.centroid_vector.y], color='red')
+            if max_stress:
+                ax.scatter([v.x for v in max_stress], [v.y for v in max_stress], color="lime")
+        omit_crank= 1
     miny, maxy = ax.get_ylim()
     minx, maxx = ax.get_xlim()
     
@@ -221,6 +235,11 @@ if __name__ == "__main__":
     if '3' in sys.argv:
         powered = examples.build_double_crank(5)
         plot_rotation_mach(powered, frames=200, inversion=[0, 1, 1, 1, 1, 1], lims=[[-12, 24], [-17, 17]], save="")
+    
+    
+    if '4' in sys.argv:
+        machine = examples.build_machine()
+        plot_machine(machine.solution(1.8*gm.pi, pattern=1), mass_center=True)
     
 
 
