@@ -633,8 +633,8 @@ class SliderCrank:
         
         #Ground optional
         if len(links) == 3:
-            gg = Curve(gm.Vector(0, 0), [gm.Vector(0,0,),])
-            self.links.append(Link(gm.Vector(0, 0), [gm.Vector(0, 0)], [gg,], 0.0))
+            gg = Curve(Vector(0, 0), [Vector(0,0,),])
+            self.links.append(Link(Vector(0, 0), [Vector(0, 0)], [gg,], 0.0))
             self.connections.append([0,])
         
         if rotation > 2*pi:
@@ -1064,7 +1064,7 @@ class Machine:
         include_crank = 0
         current = 0
         for mechanism in snapshot:
-            link_ = 0
+            link_ = 0+include_crank
             stresses = []
             location = None
             for link in mechanism[include_crank:-1]:
@@ -1100,7 +1100,7 @@ class Machine:
                 locations_.append(location)
             include_crank = 1
             current+=1
-        return linear_and_angular_accelerations, final_forces_, final_stresses_, vonMises_, locations_
+        return linear_and_angular_accelerations, final_forces_, final_stresses_, vonMises_, locations_, snapshot
     
     
 

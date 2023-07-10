@@ -10,6 +10,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 from display import Graphics
 import tkinter.filedialog as fd
+from tkinter.simpledialog import askfloat
 import tkinter.messagebox as msg
 from math import sin, cos, tan, pi
 import graphics
@@ -398,6 +399,7 @@ class UIMechanism(ttk.Frame):
         self.graphics = Graphics(self, (9.6, 6), row=0, column=0, columnspan=1, rowspan=10, dpi=100, title="")
         self.cursor = -1
         self.temp = None
+        self.moved = Vector(0, 0)
         #Variables
         self.sname = tk.StringVar(self)
         self.slider = tk.StringVar(self)
@@ -405,6 +407,7 @@ class UIMechanism(ttk.Frame):
         self.srotation = tk.StringVar(self)
         self.angle_rotate = tk.DoubleVar(self)
         self.inversion = tk.IntVar(self)
+        self.stress_analysis = tk.IntVar(self)
         self.crank = None
         self.coupler = None
         self.output = None
@@ -444,6 +447,7 @@ class UIMechanism(ttk.Frame):
         ttk.Button(self.controls, text="Animate", command=self.animate).grid(row=5, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
         
         ttk.Checkbutton(self.controls, text="Inversion", variable=self.inversion, onvalue=1, offvalue=0).grid(row=0, column=6, columnspan=2, sticky=tk.SE+tk.NW, padx=(15, 0))
+        ttk.Checkbutton(self.controls, text="Stress Analysis", variable=self.stress_analysis, onvalue=1, offvalue=0).grid(row=1, column=6, columnspan=2, sticky=tk.SE+tk.NW, padx=(15, 0))
         ttk.Button(self.controls, text="new", command=self.new).grid(row=3, column=6, sticky=tk.SE+tk.NW, columnspan=2, padx=(15, 0))
         ttk.Button(self.controls, text="save", command=self.save).grid(row=4, column=6, sticky=tk.SE+tk.NW, columnspan=2, padx=(15, 0))
         ttk.Button(self.controls, text="delete", command=self.delete).grid(row=5, column=6, sticky=tk.SE+tk.NW, columnspan=2, padx=(15, 0))
@@ -538,18 +542,39 @@ class UIMechanism(ttk.Frame):
                 msg.showerror(parent=self, title="Error", message="Invalid parameters\n"+specific_msg)
             else:
                 if self.slider.get() == "Ground:":
+                    stress_analysis=False
+                    differential_ = 0
+                    density_ = 0
+                    if self.stress_analysis.get():
+                        dx = askfloat("Stress Analysis", "differentials for:", parent=self)
+                        density = askfloat("Stress Analysis", "density of the material:", parent=self)
+                        if type(dx) == float and type(density) == float:
+                            if dx < 0 or density < 0:
+                                msg.showerror(parent=self, title="Error", message="Cannot work with negative density nor differentials")
+                            else:
+                                differential_ = dx
+                                density_ = density
+                                stress_analysis = True
                     self.temp = Mechanism(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy(), self.links[ground].copy()],\
-                              connections=[crank_connections, coupler_connections, output_connections, ground_connections], name=name)
+                              connections=[crank_connections, coupler_connections, output_connections, ground_connections], name=name, stress_analysis=stress_analysis, dx=differential_, density=density_, init=False)
+                    self.temp.moved = self.moved
+                    self.temp.translate(self.moved.x, self.moved.y)
+                    self.temp.rotate(rotation-self.rotated)
+                    self.temp.rotation = rotation
                 else:
                     self.temp = SliderCrank(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy()],\
-                                connections=[crank_connections, coupler_connections, output_connections], offset=offset, name=name)
-                
+                                connections=[crank_connections, coupler_connections, output_connections], offset=offset, name=name, init=False)
+                    self.temp.moved = self.moved
+                    self.temp.translate(self.moved.x, self.moved.y)
+                    self.temp.rotate(rotation-self.rotated)
+                    self.temp.rotation = rotation
                 list_options = list(self.select["values"])
                 list_options[self.select.current()] = self.temp.name
                 self.select["values"] = tuple(list_options)
                 self.mechanisms[self.select.current()] = self.temp.copy()
                 self.select.set(self.select["values"][self.select.current()])
                 self.load_mechanism(self.temp)
+                
     
     
     def new(self):
@@ -623,7 +648,9 @@ class UIMechanism(ttk.Frame):
         self.crank.set(mechanism.links[0].name)
         self.coupler.set(mechanism.links[1].name)
         self.output.set(mechanism.links[2].name)
-        
+        self.stress_analysis.set(int(mechanism.stress_analysis))
+        self.moved = mechanism.moved.copy()
+        self.rotated = mechanism.rotation
         self.connections[0]['values'] = [f'x:{v.x} y:{v.y}' for v in mechanism.links[0].connections]
         self.connections[1]['values'] = [f'x:{v.x} y:{v.y}' for v in mechanism.links[0].connections]
         self.connections[2]['values'] = [f'x:{v.x} y:{v.y}' for v in mechanism.links[1].connections]
@@ -964,6 +991,68 @@ class UIMachine(ttk.Frame):
 
 
 
+class UIStress(ttk.Frame):
+    def __init__(self, master, machines:List[Machine]):
+        super().__init__(master)
+        self.machines = machines
+        self.graphics = Graphics(self, (9.6, 6), row=0, column=0, columnspan=1, rowspan=10, dpi=100, title="")
+        self.angle_rotate = tk.DoubleVar(self)
+        self.sangular_speed = tk.StringVar(self)
+        self.sangular_acceleration = tk.StringVar(self)
+        self.sinversion_array = tk.StringVar(self)
+        self.smoments_array = tk.StringVar(self)
+        #------
+        self.controls = tk.LabelFrame(self, text="Controls")
+        self.controls.grid(row=10, column=0, rowspan=1, sticky=tk.SE+tk.NW, pady=(0, 2), padx=(2, 2))
+        ttk.Button(self.controls, text="Solve", command=self.solve).grid(row=2, column=4, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        self.select = ttk.Combobox(self.controls, state="readonly", values=[i.name for i in machines])
+        ttk.Label(self.controls, text="Machine:").grid(row=0, column=0, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        self.select.grid(row=0, column=1, sticky=tk.SE+tk.NW, columnspan=1, padx=(15, 0))
+        
+        ttk.Label(self.controls, text="Input angle (°)").grid(row=1, column=0, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Label(self.controls, textvariable=self.angle_rotate).grid(row=1, column=1, columnspan=1, sticky=tk.SE+tk.NW, padx=(0, 10))
+        ttk.Scale(self.controls, variable=self.angle_rotate, from_=0, to=360).grid(row=2, column=0, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
+        ttk.Label(self.controls, text="Angular speed").grid(row=3, column=0, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Label(self.controls, text="Angular acceleration").grid(row=4, column=0, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Entry(self.controls, textvariable=self.sangular_speed).grid(row=3, column=1, columnspan=1, sticky=tk.SE+tk.NW)
+        ttk.Entry(self.controls, textvariable=self.sangular_acceleration).grid(row=4, column=1, columnspan=1, sticky=tk.SE+tk.NW)
+        ttk.Label(self.controls, text="Inversion Array:").grid(row=0, column=2, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Entry(self.controls, textvariable=self.sinversion_array).grid(row=1, column=2, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Label(self.controls, text="External Moments:").grid(row=2, column=2, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Entry(self.controls, textvariable=self.smoments_array).grid(row=3, column=2, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))
+        
+    
+    def solve(self, *args):
+        if self.select.current() == -1:
+            return
+        try:
+            self.graphics.clear()
+            input_rad = self.angle_rotate.get()*pi/180
+            speed = float(self.sangular_speed.get())
+            acceleration = float(self.sangular_acceleration.get())
+            inversions = self.check_inversion_array()
+            moments_ = self.smoments_array.get()
+            moments = [float(o) for o in moments_.split(',')]
+            accelerations, forces, stresses, vonMises, locations, snapshot = self.machines[self.select.current()].solution_kinetics(input_rad, speed, acceleration, moments, pattern=inversions)
+            graphics.plot_machine(snapshot, mass_center=True, max_stress=locations, axes=self.graphics.axis)
+            self.graphics.render()
+        except ValueError:
+            msg.showerror(parent=self, title="Error", message="Either acceleration or speed not a number")
+        except Exception as e:
+            msg.showerror(parent=self, title="Error", message=str(e))
+    
+    
+    def check_inversion_array(self):
+        inp = self.sinversion_array.get()
+        if inp == "0" or inp == "1":
+            return int(inp)
+        m = re.fullmatch("[01]+", inp)
+        if m:
+            return [int(i) for i in m.group()]
+        raise ValueError("Inversion array not valid must be a series of 0s and 1s or a single 0 or 1")
+    
+
+
 class GUI(tk.Tk):
     def __init__(self, curves:List[Curve]=[], links:List[Link]=[], mechanisms:List[Mechanism|SliderCrank]=[], machines:List[Machine]=[]):
         super().__init__()
@@ -980,7 +1069,8 @@ class GUI(tk.Tk):
             "Curves": UICurve(self.notebook, self.curves),
             "Links":  UILink(self.notebook, self.curves, self.links),
             "Mechanisms": UIMechanism(self.notebook, self.links, self.mechanisms),
-            "Machines": UIMachine(self.notebook, self.mechanisms, self.machines)
+            "Machines": UIMachine(self.notebook, self.mechanisms, self.machines),
+            "Stresses":UIStress(self.notebook, self.machines)
         }
         
         for key, value in self.pages.items():
@@ -1000,18 +1090,11 @@ class GUI(tk.Tk):
 
 if __name__ == "__main__":
     import examples
-    #wd = tk.Tk()
     compresor = examples.build_compresor(3)
     machine = examples.build_machine()
     vline = examples.build_vline()
     power_comp = examples.build_double_crank(5)
-    #nn = UICurve(wd, [])
-    #nn = UILink(wd, [], [])
-    #nn = UIMechanism(wd, [link, link2, link3, link4], [mech,])
-    #nn = UIMachine(wd, [mech,], [mac,])
-    #nn.grid(row=0, column=0)
-    #wd.mainloop()
-    gui = GUI(mechanisms=compresor.mechanisms[:]+machine.mechanisms[:], machines=[compresor, machine, vline, power_comp])
+    gui = GUI(links=compresor.mechanisms[0].links[:]+machine.mechanisms[0].links[:], mechanisms=compresor.mechanisms[:]+machine.mechanisms[:], machines=[compresor, machine, vline, power_comp])
     gui.mainloop()
     
 

@@ -20,10 +20,10 @@ def build_machine():
     bc3 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(2, 0)], function=gm.Function(start=0, end=2, process=lambda x: 0))
 
 
-    link = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(1, 0)], [c1, c2, c3], thickness=0.1)
-    link2 = gm.Link(gm.Vector(0, 0), [gm.Vector(0.5, 1.25), gm.Vector(0.5, -1.25)], [hc1.copy(), hc2.copy(), jcurve.copy(), jcurve2.copy()], thickness=0.1)
-    link3 = gm.Link(gm.Vector(0, 0), [gm.Vector(0.5, 1.25), gm.Vector(0.5, -1.25)], [hc1, hc2, jcurve, jcurve2], thickness=0.1)
-    link4 = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(2, 0)], [bc1, bc2, bc3], thickness=0.1)
+    link = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(1, 0)], [c1, c2, c3], thickness=0.1, name="crank machine")
+    link2 = gm.Link(gm.Vector(0, 0), [gm.Vector(0.5, 1.25), gm.Vector(0.5, -1.25)], [hc1.copy(), hc2.copy(), jcurve.copy(), jcurve2.copy()], thickness=0.1, name="coupler machine")
+    link3 = gm.Link(gm.Vector(0, 0), [gm.Vector(0.5, 1.25), gm.Vector(0.5, -1.25)], [hc1, hc2, jcurve, jcurve2], thickness=0.1, name="output machine")
+    link4 = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(2, 0)], [bc1, bc2, bc3], thickness=0.1, name="ground machine")
     
     #Centroid calculations
     link.set_lims([0, 1], 1)
@@ -53,7 +53,7 @@ def build_machine():
 
 def build_compresor(pistons:int):
     gg = gm.Curve(gm.Vector(0, 0), [gm.Vector(0,0,),])
-    ground = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0)], [gg,], 0.0)
+    ground = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0)], [gg,], 0.0, name="ground compressor")
     half_circle = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/20, (4-(x/20)**2)**0.5) for x in range(-40, 41)])
     half_circle.rotate(gm.pi/2)
     half_circle2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/80, (0.5-(x/80)**2)**0.5) for x in range(-36, 37)])
@@ -61,19 +61,19 @@ def build_compresor(pistons:int):
     half_circle2.translate(4, 0)
     line_down = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 2), gm.Vector(4.5, 0.45)])
     line_up = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, -2), gm.Vector(4.5, -0.45)])
-    crank = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(4, 0)], [half_circle, line_down, line_up, half_circle2], 0.0)
+    crank = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(4, 0)], [half_circle, line_down, line_up, half_circle2], 0.0, name="crank compressor")
     
     half_circle3 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/80, (0.25-(x/80)**2)**0.5) for x in range(-40, 41)])
     half_circle3.rotate(gm.pi/2)
     line_down2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 0.5), gm.Vector(12, 0)])
     line_up2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, -0.5), gm.Vector(12, 0)])
-    coupler = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(12, 0)], [half_circle3, line_down2, line_up2], 0.0)
+    coupler = gm.Link(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(12, 0)], [half_circle3, line_down2, line_up2], 0.0, name="coupler compressor")
     
     side1 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(1, 0)])
     side2 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 0), gm.Vector(0, 2)])
     side3 = gm.Curve(gm.Vector(0, 0), [gm.Vector(0, 2), gm.Vector(1, 2)])
     side4 = gm.Curve(gm.Vector(0, 0), [gm.Vector(1, 0), gm.Vector(1, 2)])
-    slider = gm.Link(gm.Vector(0, 0), [gm.Vector(0.5, 1)], [side1, side2, side3, side4], 0.0)
+    slider = gm.Link(gm.Vector(0, 0), [gm.Vector(0.5, 1)], [side1, side2, side3, side4], 0.0, name="compressor slider")
     piston_1 = gm.SliderCrank(gm.Vector(0, 0), 0, [crank, coupler, slider, ground], ((0, 1), (0, 1), (0,), (0,)))
     
     if pistons%2:
@@ -196,7 +196,7 @@ if __name__ == "__main__":
     if '3' in sys.argv:
         print("Calculating accelerations for 'machine'")
         machine = build_machine()
-        accelerations, forces, stresses, vonMises, locations = machine.solution_kinetics(1.8*gm.pi, 0.2, 1, [1,], pattern=1)
+        accelerations, forces, stresses, vonMises, locations, _ = machine.solution_kinetics(1.8*gm.pi, 0.2, 1, [1,], pattern=1)
         print(f"Accelerations: {accelerations}\nForces: {forces}\nStresses: {stresses}\nvon Mises: {vonMises}")
         print("Locations:")
         for i in locations:
