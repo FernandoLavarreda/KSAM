@@ -196,7 +196,7 @@ if __name__ == "__main__":
     if '3' in sys.argv:
         print("Calculating accelerations for 'machine'")
         machine = build_machine()
-        accelerations, forces, stresses, vonMises, locations, _ = machine.solution_kinetics(1.8*gm.pi, 0.2, 1, [1,], pattern=1)
+        accelerations, forces, stresses, vonMises, locations, _, _ = machine.solution_kinetics(1.8*gm.pi, 0.2, 1, [1,], pattern=1)
         print(f"Accelerations: {accelerations}\nForces: {forces}\nStresses: {stresses}\nvon Mises: {vonMises}")
         print("Locations:")
         for i in locations:

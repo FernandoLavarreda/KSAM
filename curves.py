@@ -4,7 +4,7 @@
 
 import re
 import csv
-from geometry import Curve, Vector, Link, Mechanism, SliderCrank, Machine
+from geometry import Function, Curve, Vector, Link, Mechanism, SliderCrank, Machine
 from typing import Tuple, List
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -77,6 +77,7 @@ class UICurve(ttk.Frame):
             start = float(limits[0])
             end = float(limits[1])
             samples = int(limits[2])
+            save_start = start
             if start>=end:
                 msg.showerror(parent=self, title="Error", message="End can't be smaller than beginning \n(limits of the function)")
                 return
@@ -91,6 +92,7 @@ class UICurve(ttk.Frame):
             else:
                 self.temp.vectors = [*self.temp.vectors]+vectors
                 self.temp.functions = self.sfunctions.get()
+                self.temp.function = Function(start=save_start, end=end, string_function=evaluate)
                 self.load_curve(self.temp)
         else:
             msg.showerror(parent=self, title="Error", message="Couldn't interpret expression")
@@ -217,6 +219,8 @@ class UILink(ttk.Frame):
         self.sremove_curve = tk.StringVar(self)
         self.sconnectionx = tk.StringVar(self)
         self.sconnectiony = tk.StringVar(self)
+        self.supper = tk.StringVar(self)
+        self.slower = tk.StringVar(self)
         #--------
         self.controls = tk.LabelFrame(self, text="Controls")
         self.controls.grid(row=10, column=0, rowspan=1, sticky=tk.SE+tk.NW, pady=(0, 2), padx=(2, 2))
@@ -247,8 +251,29 @@ class UILink(ttk.Frame):
         self.select.bind("<<ComboboxSelected>>", self.selection)
         self.select_connection.bind("<<ComboboxSelected>>", self.select_conn)
         self.select.grid(row=0, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
+        ttk.Label(self.controls, text="Upper Limits:").grid(row=4, column=0, sticky=tk.SE+tk.NW, padx=(0, 0), pady=(5, 0))
+        ttk.Label(self.controls, text="Lower Limits:").grid(row=5, column=0, sticky=tk.SE+tk.NW, padx=(0, 0))
+        ttk.Entry(self.controls, textvariable=self.supper).grid(row=4, column=1, sticky=tk.SE+tk.NW, columnspan=2, pady=(5, 0))
+        ttk.Entry(self.controls, textvariable=self.slower).grid(row=5, column=1, sticky=tk.SE+tk.NW, columnspan=2)
+        ttk.Button(self.controls, text="set", command=self.set_lims).grid(row=4, column=3, sticky=tk.SE+tk.NW, rowspan=2, pady=(5, 0))
         self.curves_available()
         #----------------------------
+    
+    
+    def set_lims(self, *args):
+        if self.select.current() != -1:
+            try:
+                ups = [int(i) for i in self.supper.get().split(',')]
+                lower = [int(i) for i in self.slower.get().split(',')]
+                if min(ups)<0 or max(ups)>len(self.select_remove_curve['values']) or min(lower)<0 or max(lower)>len(self.select_remove_curve['values']):
+                    raise IndexError
+            except ValueError:
+                msg.showerror(parent=self, title="Error", message="Not a number in the limits of the link")
+            except IndexError:
+                msg.showerror(parent=self, title="Error", message=f"Limits must be between 1 and the curves available: {len(self.select_remove_curve['values'])}")
+        else:
+            self.temp.set_lims([i-1 for i in ups], 1)
+            self.temp.set_lims([i-1 for i in ups], 0)
     
     
     def select_conn(self, *args):
@@ -385,6 +410,30 @@ class UILink(ttk.Frame):
         self.select_connection.set('')
         self.sconnectionx.set('')
         self.sconnectiony.set('')
+        self.slower.set('')
+        self.supper.set('')
+        
+        if link.upper:
+            v = ''
+            for func in link.upper:
+                for i in range(len(link.curves)):
+                    if link.curves[i].function == func:
+                        v+=str(i+1)+","
+                        break
+            
+            if v:
+                self.supper.set(v[:-1])
+            
+        if link.lower:
+            v = ''
+            for func in link.lower:
+                for i in range(len(link.curves)):
+                    if link.curves[i].function == func:
+                        v+=str(i+1)+","
+                        break
+            if v:
+                self.slower.set(v[:-1])
+        
         if link.curves:
             for c in link.curves:
                 self.graphics.static_drawing([[v.x for v in c.vectors], [v.y for v in c.vectors]])
@@ -898,7 +947,7 @@ class UIMachine(ttk.Frame):
         if self.select.current() != -1:
             self.machines.pop(self.select.current())
             counter = 0
-            options = list(self.select[values])
+            options = list(self.select["values"])
             options.pop(self.select.current())
             self.select["values"] = options
             self.select.set('')
@@ -928,6 +977,7 @@ class UIMachine(ttk.Frame):
     
     
     def selection(self, *args):
+        self.sinversion_array.set('1')
         self.load_machine(self.machines[self.select.current()])
         self.temp = self.machines[self.select.current()].copy()
     
@@ -968,7 +1018,10 @@ class UIMachine(ttk.Frame):
                     save_name = ""
                     if self.bsave_image.get():
                         save_name = fd.asksaveasfilename(parent=self, title="Save screen", filetypes=(("PNG", "png"),), initialdir="C:", defaultextension="png")
-                    solution = machine.solution(self.angle_rotate.get()*pi/180, inversions)
+                    try:
+                        solution = machine.solution(self.angle_rotate.get()*pi/180, inversions)
+                    except Exception as e:
+                        msg.showerror(parent=self, title="Error", message=str(e))
                     graphics.plot_machine(solution, self.graphics.axis)
                     if save_name:
                         self.graphics.fig.savefig(save_name)
@@ -1001,10 +1054,11 @@ class UIStress(ttk.Frame):
         self.sangular_acceleration = tk.StringVar(self)
         self.sinversion_array = tk.StringVar(self)
         self.smoments_array = tk.StringVar(self)
+        self.bmass_center = tk.BooleanVar(self)
         #------
         self.controls = tk.LabelFrame(self, text="Controls")
         self.controls.grid(row=10, column=0, rowspan=1, sticky=tk.SE+tk.NW, pady=(0, 2), padx=(2, 2))
-        ttk.Button(self.controls, text="Solve", command=self.solve).grid(row=2, column=4, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Button(self.controls, text="Solve", command=self.solve).grid(row=2, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))
         self.select = ttk.Combobox(self.controls, state="readonly", values=[i.name for i in machines])
         ttk.Label(self.controls, text="Machine:").grid(row=0, column=0, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
         self.select.grid(row=0, column=1, sticky=tk.SE+tk.NW, columnspan=1, padx=(15, 0))
@@ -1020,6 +1074,7 @@ class UIStress(ttk.Frame):
         ttk.Entry(self.controls, textvariable=self.sinversion_array).grid(row=1, column=2, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))
         ttk.Label(self.controls, text="External Moments:").grid(row=2, column=2, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
         ttk.Entry(self.controls, textvariable=self.smoments_array).grid(row=3, column=2, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Checkbutton(self.controls, text="Mass Center", variable=self.bmass_center, onvalue=True, offvalue=False).grid(row=0, column=4, sticky=tk.SE+tk.NW, padx=(10, 0))
         
     
     def solve(self, *args):
@@ -1033,8 +1088,8 @@ class UIStress(ttk.Frame):
             inversions = self.check_inversion_array()
             moments_ = self.smoments_array.get()
             moments = [float(o) for o in moments_.split(',')]
-            accelerations, forces, stresses, vonMises, locations, snapshot = self.machines[self.select.current()].solution_kinetics(input_rad, speed, acceleration, moments, pattern=inversions)
-            graphics.plot_machine(snapshot, mass_center=True, max_stress=locations, axes=self.graphics.axis)
+            accelerations, forces, stresses, vonMises, locations, snapshot, order = self.machines[self.select.current()].solution_kinetics(input_rad, speed, acceleration, moments, pattern=inversions)
+            graphics.plot_machine(snapshot, mass_center=self.bmass_center.get(), max_stress=locations, axes=self.graphics.axis)
             self.graphics.render()
         except ValueError:
             msg.showerror(parent=self, title="Error", message="Either acceleration or speed not a number")
@@ -1050,6 +1105,11 @@ class UIStress(ttk.Frame):
         if m:
             return [int(i) for i in m.group()]
         raise ValueError("Inversion array not valid must be a series of 0s and 1s or a single 0 or 1")
+    
+    
+    def machines_available(self):
+        if self.machines:
+            self.select["values"] = [i.name for i in self.machines]
     
 
 
@@ -1085,6 +1145,7 @@ class GUI(tk.Tk):
         self.pages["Links"].curves_available()
         self.pages["Mechanisms"].links_available()
         self.pages["Machines"].mechanisms_available()
+        self.pages["Stresses"].machines_available()
 
 
 

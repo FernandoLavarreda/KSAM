@@ -76,7 +76,7 @@ def build_callable_function(string:str):
 
 class Function:
     def __init__(self, start:float, end:float, process:Callable[[float], float]=None, string_function=""):
-        assert start<end, "Start must be smallet than end"
+        assert start<end, f"Start must be smaller than end, {start}, {end}"
         assert (process != None) ^ (string_function != ""), "Either process xor string_function must be valid"
         self.start = start
         self.end = end
@@ -858,6 +858,8 @@ class Machine:
         inversions = None
         solutions = [0 for i in range(len(self.mechanisms)+1)]
         if type(pattern) == list:
+            if len(pattern) != len(self.mechanisms):
+                raise ValueError("Incorrect inversion, must be a single 1 or 0 or a list of 1s and 0s for each mechanism")
             inversions = pattern
         elif pattern:
             inversions = [1 for i in range(len(self.mechanisms))]
@@ -887,6 +889,8 @@ class Machine:
         solutions = [0 for i in range(len(self.mechanisms)+1)]
         accelerations = [[] for i in range(len(self.mechanisms)+1)]
         if type(pattern) == list:
+            if len(pattern) != len(self.mechanisms):
+                raise ValueError("Incorrect inversion, must be a single 1 or 0 or a list of 1s and 0s for each mechanism")
             inversions = pattern
         elif pattern:
             inversions = [1 for i in range(len(self.mechanisms))]
@@ -1100,7 +1104,7 @@ class Machine:
                 locations_.append(location)
             include_crank = 1
             current+=1
-        return linear_and_angular_accelerations, final_forces_, final_stresses_, vonMises_, locations_, snapshot
+        return linear_and_angular_accelerations, final_forces_, final_stresses_, vonMises_, locations_, snapshot, sorting
     
     
 
