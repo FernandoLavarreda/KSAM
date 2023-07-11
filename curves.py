@@ -88,10 +88,11 @@ class UICurve(ttk.Frame):
                     result = eval(evaluate.replace("x", "("+str(start)+")"))
                     vectors.append(Vector(start, result))
                     start+=dx
+                vectors.append(Vector(end, eval(evaluate.replace("x", "("+str(end)+")"))))
             except Exception as e:
                 msg.showerror(parent=self, title="Error", message="Couldn't evaluate expression")
             else:
-                self.temp.vectors = [*self.temp.vectors]+vectors
+                self.temp.vectors = list(self.temp.vectors)+vectors
                 self.temp.functions = self.sfunctions.get()
                 self.temp.function = Function(start=save_start, end=end, string_function=evaluate)
                 self.load_curve(self.temp)
@@ -114,7 +115,7 @@ class UICurve(ttk.Frame):
     
     def clear(self):
         if self.temp != None:
-            self.temp.vectors = ()
+            self.temp.vectors = []
             self.load_curve(self.temp)
     
     
@@ -437,7 +438,7 @@ class UILink(ttk.Frame):
         
         if link.curves:
             for c in link.curves:
-                self.graphics.static_drawing([[v.x for v in c.vectors], [v.y for v in c.vectors]])
+                self.graphics.static_drawing([[v.x for v in c.vectors], [v.y for v in c.vectors]], grid=True)
 
 
 

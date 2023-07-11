@@ -48,10 +48,11 @@ class Graphics():
             self.render()
     
     
-    def static_drawing(self, sequence:Tuple[List[float], List[float]]):
+    def static_drawing(self, sequence:Tuple[List[float], List[float]], grid=False):
         self.axis.plot(sequence[0], sequence[1])
         #if len(str(self.axis.get_yticks()[0]))>4:
         #    self.axis.set_yticklabels(self.axis.get_yticks(), rotation=70)
+        self.axis.grid(visible=grid)
         self.axis.set_xticklabels([])
         self.axis.set_xticks([])
         self.axis.set_yticks([])
