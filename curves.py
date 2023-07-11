@@ -14,6 +14,7 @@ from tkinter.simpledialog import askfloat
 import tkinter.messagebox as msg
 from math import sin, cos, tan, pi
 import graphics
+import traceback
 
 
 class UICurve(ttk.Frame):
@@ -1055,6 +1056,7 @@ class UIStress(ttk.Frame):
         self.sinversion_array = tk.StringVar(self)
         self.smoments_array = tk.StringVar(self)
         self.bmass_center = tk.BooleanVar(self)
+        self.breport = tk.BooleanVar(self)
         #------
         self.controls = tk.LabelFrame(self, text="Controls")
         self.controls.grid(row=10, column=0, rowspan=1, sticky=tk.SE+tk.NW, pady=(0, 2), padx=(2, 2))
@@ -1075,12 +1077,14 @@ class UIStress(ttk.Frame):
         ttk.Label(self.controls, text="External Moments:").grid(row=2, column=2, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
         ttk.Entry(self.controls, textvariable=self.smoments_array).grid(row=3, column=2, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))
         ttk.Checkbutton(self.controls, text="Mass Center", variable=self.bmass_center, onvalue=True, offvalue=False).grid(row=0, column=4, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Checkbutton(self.controls, text="Report", variable=self.breport, onvalue=True, offvalue=False).grid(row=1, column=4, sticky=tk.SE+tk.NW, padx=(10, 0))
         
     
     def solve(self, *args):
         if self.select.current() == -1:
             return
         try:
+            machine = self.machines[self.select.current()]
             self.graphics.clear()
             input_rad = self.angle_rotate.get()*pi/180
             speed = float(self.sangular_speed.get())
@@ -1088,11 +1092,44 @@ class UIStress(ttk.Frame):
             inversions = self.check_inversion_array()
             moments_ = self.smoments_array.get()
             moments = [float(o) for o in moments_.split(',')]
-            accelerations, forces, stresses, vonMises, locations, snapshot, order = self.machines[self.select.current()].solution_kinetics(input_rad, speed, acceleration, moments, pattern=inversions)
+            accelerations, forces, stresses, vonMises, locations, snapshot, order = machine.solution_kinetics(input_rad, speed, acceleration, moments, pattern=inversions)
             graphics.plot_machine(snapshot, mass_center=self.bmass_center.get(), max_stress=locations, axes=self.graphics.axis)
+            if self.breport.get():
+                save_name = fd.asksaveasfilename(parent=self, title="Save screen", filetypes=(("html", "html"),), initialdir="C:", defaultextension="html")
+                if save_name:
+                    info = "<html><h1>Report</h1><hr>"
+                    include_crank = 0
+                    names = ["crank", "coupler", "output", "ground"]
+                    counter = 0
+                    for i in order[1:]:
+                        info+=f"<br><h3>Mechanism: {machine.mechanisms[i-1].name}<br><h3>Accelerations:</h3><br>"
+                        mech_index = counter*4
+                        
+                        for accel in accelerations[counter][include_crank:-1]:
+                            info+=f"x: {accel[0]} <br> y: {accel[1]} <br> angular: {accel[2]}<br>"
+                        
+                        info+=f"<h3>Forces:</h3><br>"
+                        
+                        for f in range(include_crank*2, 4):
+                            info+=f"Connection {f+1}: \nx: {forces[counter][f*2][0]} \ny: {forces[counter][f*2+1][0]}\n"
+                        
+                        
+                        info+=f"<h3>Stresses:</h3><br>"
+                        for f in range(include_crank, 3):
+                            info+=f"<br><br>Link {names[f]}: <br>shear: {stresses[counter*2+f][0]} <br>normal: {stresses[counter*2+f][1]} <br>moment stres: {stresses[counter*2+f][2]}"
+                            info+=f"<br>von Mises: {vonMises[counter*2+f]} <br>"
+                        
+                        include_crank = 1
+                        counter+=1
+                    
+                    with open(save_name, "w") as ff:
+                        ff.write(info)
+                            
+                            
+                    
             self.graphics.render()
         except ValueError:
-            msg.showerror(parent=self, title="Error", message="Either acceleration or speed not a number")
+            msg.showerror(parent=self, title="Error", message="Possible errors: acceleration or speed not a number or inversion array not correct")
         except Exception as e:
             msg.showerror(parent=self, title="Error", message=str(e))
     
