@@ -223,6 +223,7 @@ class UILink(ttk.Frame):
         self.sconnectiony = tk.StringVar(self)
         self.supper = tk.StringVar(self)
         self.slower = tk.StringVar(self)
+        self.bgrid = tk.BooleanVar(self)
         #--------
         self.controls = tk.LabelFrame(self, text="Controls")
         self.controls.grid(row=10, column=0, rowspan=1, sticky=tk.SE+tk.NW, pady=(0, 2), padx=(2, 2))
@@ -258,6 +259,7 @@ class UILink(ttk.Frame):
         ttk.Entry(self.controls, textvariable=self.supper).grid(row=4, column=1, sticky=tk.SE+tk.NW, columnspan=2, pady=(5, 0))
         ttk.Entry(self.controls, textvariable=self.slower).grid(row=5, column=1, sticky=tk.SE+tk.NW, columnspan=2)
         ttk.Button(self.controls, text="set", command=self.set_lims).grid(row=4, column=3, sticky=tk.SE+tk.NW, rowspan=2, pady=(5, 0))
+        ttk.Checkbutton(self.controls, text="show grid", variable=self.bgrid).grid(row=3, column=4, sticky=tk.E)
         self.curves_available()
         #----------------------------
     
@@ -438,7 +440,7 @@ class UILink(ttk.Frame):
         
         if link.curves:
             for c in link.curves:
-                self.graphics.static_drawing([[v.x for v in c.vectors], [v.y for v in c.vectors]], grid=True)
+                self.graphics.static_drawing([[v.x for v in c.vectors], [v.y for v in c.vectors]], grid=self.bgrid.get())
 
 
 

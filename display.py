@@ -52,11 +52,13 @@ class Graphics():
         self.axis.plot(sequence[0], sequence[1])
         #if len(str(self.axis.get_yticks()[0]))>4:
         #    self.axis.set_yticklabels(self.axis.get_yticks(), rotation=70)
-        self.axis.grid(visible=grid)
-        self.axis.set_xticklabels([])
-        self.axis.set_xticks([])
-        self.axis.set_yticks([])
-        self.axis.set_yticklabels([])
+        if not grid:
+            self.axis.set_xticklabels([])
+            self.axis.set_xticks([])
+            self.axis.set_yticks([])
+            self.axis.set_yticklabels([])
+        else:
+            self.axis.grid(visible=grid)
         self.render()
     
     
