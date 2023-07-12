@@ -880,10 +880,14 @@ class Machine:
         return snapshot
     
     
-    def solution_kinetics(self, angle_rad:float, speed_rad:float, acceleration_rad:float, external_moments:List[float], pattern:list=0):
+    def solution_kinetics(self, angle_rad:float, speed_rad:float, acceleration_rad:float, external_moments_cranks:List[float]=[], external_moments_couplers:List[float]=[], pattern:list=0):
         assert all([m.stress_analysis for m in self.mechanisms]), "All mechanisms must have a centroid and mass to find the forces"
-        assert len(external_moments) == len(self.mechanisms) or len(external_moments) == 1, "Must provide an external moment for each mechanism or just for the last one"
+        assert len(external_moments_cranks) == len(self.mechanisms) or len(external_moments_cranks) == 1 or len(external_moments_cranks) == 0, "Must provide an external moment for each mechanism or just for the last one"
+        assert len(external_moments_couplers) == len(self.mechanisms) or len(external_moments_couplers) == 1 or len(external_moments_couplers) == 0, "Must provide an external moment for each mechanism or just for the last one"
         assert all([type(m) == Mechanism for m in self.mechanisms]), "Stresses have only been implemented to four link-pin mechanisms. No SliderCrank, nor any other type"
+        
+        if len(external_moments_couplers) == 0 and len(external_moments_cranks) == 0:
+            raise ValueError("No external torque is being applied")
         
         inversions = None
         solutions = [0 for i in range(len(self.mechanisms)+1)]
@@ -1046,20 +1050,36 @@ class Machine:
             solution_forces_.append(force_matrix)
             #print(linalg.solve(force_matrix, mass_x_accelerations))
         
-        external_moments_ = []
-        if len(external_moments) == 1:
-            for i in range(len(self.mechanisms)):
-                external_moments_.append(0)
-            external_moments_[-1] = external_moments[0]
-        else:
-            external_moments_ = external_moments
+        external_moments_crank = []
+        external_moments_coupler = []
+        
+        for i in range(len(self.mechanisms)):
+                external_moments_crank.append(0)
+        
+        if len(external_moments_cranks) == 1:
+            external_moments_crank[-1] = external_moments_cranks[0]
+        elif len(external_moments_cranks) > 1:
+            external_moments_crank = external_moments_cranks
+        
+        
+        for i in range(len(self.mechanisms)):
+                external_moments_coupler.append(0)
+        
+        if len(external_moments_couplers) == 1:
+            external_moments_coupler[-1] = external_moments_couplers[0]
+        elif len(external_moments_couplers) > 1:
+            external_moments_coupler = external_moments_couplers
+        
+        
         
         for matrix in sorting[::-1][:-1]:
-            solution_accelerations_[matrix][-1][0] -= external_moments_[matrix-1]
+            solution_accelerations_[matrix][-1][0] -= external_moments_crank[matrix-1]
+            solution_accelerations_[matrix][-4][0] -= external_moments_coupler[matrix-1]
             solution = linalg.solve(solution_forces_[matrix], solution_accelerations_[matrix])
             final_forces_.append(solution)
             if self.input_graph[matrix] != 0:
                 solution_accelerations_[self.input_graph[matrix]][-1][0]-=solution[-1][0]
+        
         final_forces_ = final_forces_[::-1]
         final_stresses_ = []
         vonMises_ = []
