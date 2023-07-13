@@ -1058,12 +1058,13 @@ class UIStress(ttk.Frame):
         self.sangular_acceleration = tk.StringVar(self)
         self.sinversion_array = tk.StringVar(self)
         self.smoments_array = tk.StringVar(self)
+        self.smoments_array_coupler = tk.StringVar(self)
         self.bmass_center = tk.BooleanVar(self)
         self.breport = tk.BooleanVar(self)
         #------
         self.controls = tk.LabelFrame(self, text="Controls")
         self.controls.grid(row=10, column=0, rowspan=1, sticky=tk.SE+tk.NW, pady=(0, 2), padx=(2, 2))
-        ttk.Button(self.controls, text="Solve", command=self.solve).grid(row=2, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Button(self.controls, text="Solve", command=self.solve).grid(row=2, column=6, columnspan=2, sticky=tk.SE+tk.NW, padx=(20, 0))
         self.select = ttk.Combobox(self.controls, state="readonly", values=[i.name for i in machines])
         ttk.Label(self.controls, text="Machine:").grid(row=0, column=0, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
         self.select.grid(row=0, column=1, sticky=tk.SE+tk.NW, columnspan=1, padx=(15, 0))
@@ -1077,10 +1078,12 @@ class UIStress(ttk.Frame):
         ttk.Entry(self.controls, textvariable=self.sangular_acceleration).grid(row=4, column=1, columnspan=1, sticky=tk.SE+tk.NW)
         ttk.Label(self.controls, text="Inversion Array:").grid(row=0, column=2, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
         ttk.Entry(self.controls, textvariable=self.sinversion_array).grid(row=1, column=2, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))
-        ttk.Label(self.controls, text="External Moments:").grid(row=2, column=2, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Label(self.controls, text="External Moments Cranks:").grid(row=2, column=2, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
         ttk.Entry(self.controls, textvariable=self.smoments_array).grid(row=3, column=2, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))
-        ttk.Checkbutton(self.controls, text="Mass Center", variable=self.bmass_center, onvalue=True, offvalue=False).grid(row=0, column=4, sticky=tk.SE+tk.NW, padx=(10, 0))
-        ttk.Checkbutton(self.controls, text="Report", variable=self.breport, onvalue=True, offvalue=False).grid(row=1, column=4, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Label(self.controls, text="External Moments Couplers:").grid(row=2, column=4, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Entry(self.controls, textvariable=self.smoments_array_coupler).grid(row=3, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Checkbutton(self.controls, text="Mass Center", variable=self.bmass_center, onvalue=True, offvalue=False).grid(row=0, column=6, sticky=tk.SE+tk.NW, padx=(20, 0))
+        ttk.Checkbutton(self.controls, text="Report", variable=self.breport, onvalue=True, offvalue=False).grid(row=1, column=6, sticky=tk.SE+tk.NW, padx=(20, 0))
         
     
     def solve(self, *args):
@@ -1093,9 +1096,21 @@ class UIStress(ttk.Frame):
             speed = float(self.sangular_speed.get())
             acceleration = float(self.sangular_acceleration.get())
             inversions = self.check_inversion_array()
+            
             moments_ = self.smoments_array.get()
-            moments = [float(o) for o in moments_.split(',')]
-            accelerations, forces, stresses, vonMises, locations, snapshot, order = machine.solution_kinetics(input_rad, speed, acceleration, moments, pattern=inversions)
+            if moments_.strip() == '':
+                moments = []
+            else:
+                moments = [float(o) for o in moments_.split(',')]
+            
+            
+            moments_coupler = self.smoments_array_coupler.get()
+            if moments_coupler.strip() == '':
+                moments__couplers = []
+            else:
+                moments__couplers = [float(o) for o in moments_coupler.split(',')]
+            
+            accelerations, forces, stresses, vonMises, locations, snapshot, order = machine.solution_kinetics(input_rad, speed, acceleration, external_moments_cranks=moments, external_moments_couplers=moments__couplers, pattern=inversions)
             graphics.plot_machine(snapshot, mass_center=self.bmass_center.get(), max_stress=locations, axes=self.graphics.axis)
             if self.breport.get():
                 save_name = fd.asksaveasfilename(parent=self, title="Save screen", filetypes=(("html", "html"),), initialdir="C:", defaultextension="html")
