@@ -1169,8 +1169,10 @@ class UIStress(ttk.Frame):
 
 
 class GUI(tk.Tk):
-    def __init__(self, curves:List[Curve]=[], links:List[Link]=[], mechanisms:List[Mechanism|SliderCrank]=[], machines:List[Machine]=[]):
+    def __init__(self, curves:List[Curve]=[], links:List[Link]=[], mechanisms:List[Mechanism|SliderCrank]=[], machines:List[Machine]=[], icon=""):
         super().__init__()
+        if icon:
+            self.iconbitmap(icon)
         self.notebook = ttk.Notebook(self)
         self.curves = curves
         self.links = links
@@ -1210,7 +1212,7 @@ if __name__ == "__main__":
     machine = examples.build_machine()
     vline = examples.build_vline()
     power_comp = examples.build_double_crank(5)
-    gui = GUI(links=compresor.mechanisms[0].links[:]+machine.mechanisms[0].links[:], mechanisms=compresor.mechanisms[:]+machine.mechanisms[:], machines=[compresor, machine, vline, power_comp])
+    gui = GUI(links=compresor.mechanisms[0].links[:]+machine.mechanisms[0].links[:], mechanisms=compresor.mechanisms[:]+machine.mechanisms[:], machines=[compresor, machine, vline, power_comp], icon="Icon/pistons.ico")
     gui.mainloop()
     
 
