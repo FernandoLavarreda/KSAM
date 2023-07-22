@@ -1,19 +1,34 @@
 'Fernando Lavarreda
-'Export Inventor sketch to csv, by diffult pick the first sketch
+'Export Inventor sketch to csv, by diffault pick the first sketch
 Sub Main()
     Dim partDoc As PartDocument
     partDoc = ThisApplication.ActiveDocument
-
-    ' Assuming the sketch you want to export is the first sketch in the document
-    Dim sketch As Sketch
-    sketch_num = 1
+	Dim oFileDlg As FileDialog
+    Call ThisApplication.CreateFileDialog(oFileDlg)
+    oFileDlg.Filter = "CSV (*.csv;*.txt)|*.csv;*.txt|All Files (*.*)|*.*"
+	oFileDlg.DialogTitle = "Save Info"
+    oFileDlg.InitialDirectory = "C:\Documents"
+	oFileDlg.CancelError = True
+	On Error Resume Next
+	oFileDlg.ShowSave
+	If Err.Number
+		Exit Sub
+	End If
+	filePath = oFileDlg.FileName
+	Dim sketch As Sketch
+    input_ = InputBox("Select a sketch to process: ", "Sketch", "1")
+	sketch_num = 1
+	If IsNumeric(input_)
+		sketch_num = CInt(input_)
+		If Not sketch_num <= partDoc.ComponentDefinition.Sketches.Count
+			sketch_num = 1
+		End If
+	End If 
+	save_ = Applitcation
     sketch = partDoc.ComponentDefinition.Sketches.Item(sketch_num)
-
-    filePath = "C:\Users\ferna\Downloads\out.txt"
 
     Dim coordinateData As String
     coordinateData = "X, Y" & vbCrLf
-
     
     Dim entity As SketchEntity
     For Each entity In sketch.SketchEntities
@@ -77,7 +92,15 @@ Sub Main()
         	For count = 0 To points Step 1
 				coordinateData = coordinateData & arr(count*2) & ", " & arr(count*2+1) & vbCrLf	
 			Next 
-        
+        ElseIf TypeOf entity Is SketchPoint
+			Dim point As SketchPoint
+			point = entity
+			If point.AttachedEntities.Count
+				Continue For
+			End If
+			coordinateData = coordinateData & "Point" & vbCrLf
+			coords = point.Geometry
+			coordinateData = coordinateData & coords.X & ", " & coords.Y & vbCrLf
 		End If
     Next
 
