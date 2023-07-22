@@ -1,6 +1,7 @@
 #Fernando Jose Lavarreda Urizar
 #Program to analyze Mechanisms, Graduation Project UVG
 
+import csv
 import numpy as np
 import numpy.linalg as linalg
 from typing import List, Tuple, Mapping, Callable
@@ -195,6 +196,36 @@ class Curve:
             self.computable_centroid = False
     
     
+    @staticmethod
+    def build_from_io(file_descriptor, delimiter=",", origin=Vector(0, 0), multiple=False):
+        reader = csv.reader(file_descriptor, delimiter=delimiter)
+        header = next(reader)
+        vectors = []
+        for line in reader:
+            if "New" in line[0]:
+                if multiple:
+                    vectors.append([])
+            elif "Point" in line[0]:
+                next(reader)
+            else:
+                try:
+                    x = float(line[0])
+                    y = float(line[1])
+                except ValueError:
+                    raise ValueError("Un able to process token: ", line[0])
+                else:
+                    if multiple:
+                        vectors[-1].append(Vector(line[0], line[1]))
+                    else:
+                        vectors.append(Vector(line[0], line[1]))
+        if multiple:
+            curves = []
+            for v in vectors:
+                curves.append(Curve(origin, v))
+            return curves
+        return Curve(origin, vectors)
+    
+    
     def rotate(self, angle:float):
         for v in self.vectors:
             v.rotate(angle)
@@ -251,6 +282,34 @@ class Link:
         self.areas = []
         self.inertias = []
         self.heights = [] #Heights for each node being analyzed, required for stresses due to momentum (Mc/I )
+    
+    
+    @staticmethod
+    def build_from_io(file_descriptor, delimiter=",", origin=Vector(0, 0)):
+        reader = csv.reader(file_descriptor, delimiter=delimiter)
+        header = next(reader)
+        vectors = []
+        connections = []
+        for line in reader:
+            if "New" in line[0]:
+                vectors.append([])
+            elif "Point" in line[0]:
+                advance = next(reader)
+                connections.append(Vector(float(advance[0]), float(advance[1])))
+            else:
+                try:
+                    x = float(line[0])
+                    y = float(line[1])
+                except ValueError:
+                    raise ValueError("Un able to process token: ", line[0])
+                else:
+                    vectors[-1].append(Vector(line[0], line[1]))
+        
+        curves = []
+        for v in vectors:
+            curves.append(Curve(origin, v))
+        
+        return Link(origin, connections, curves, 0.1)
     
     
     def rotate(self, angle:float):
@@ -1149,8 +1208,5 @@ if __name__ == "__main__":
     print(a)
     a.rotate_angle(180)
     print(a+b)
-    print(topological_sort([[1, 2, 3], [4], [5], [], [], []]))
-
-
-
-
+    print(topological_sort([[1, 2, 3], [4], [5], [], [], []]))    
+    
