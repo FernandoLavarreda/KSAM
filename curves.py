@@ -10,11 +10,10 @@ import tkinter as tk
 import tkinter.ttk as ttk
 from display import Graphics
 import tkinter.filedialog as fd
-from tkinter.simpledialog import askfloat
+from tkinter.simpledialog import askfloat, askstring
 import tkinter.messagebox as msg
 from math import sin, cos, tan, pi
 import graphics
-import traceback
 
 
 class UICurve(ttk.Frame):
@@ -43,9 +42,8 @@ class UICurve(ttk.Frame):
         self.name.grid(row=1, column=0, sticky=tk.SE+tk.NW, columnspan=2)
         ttk.Label(self.controls, text="Functions:").grid(row=2, column=0, sticky=tk.SE+tk.NW)
         self.functions.grid(row=3, column=0, sticky=tk.SE+tk.NW, columnspan=2)
-        ttk.Label(self.controls, text="Data:").grid(row=2, column=2, sticky=tk.SE+tk.NW, columnspan=1, padx=(15,0))
-        ttk.Button(self.controls, text="upload", command=self.upload).grid(row=3, column=2, sticky=tk.SE+tk.N, columnspan=1, padx=(15,0))
-        ttk.Button(self.controls, text="clear", command=self.clear).grid(row=3, column=3, sticky=tk.SE+tk.N, columnspan=1)
+        ttk.Button(self.controls, text="Upload file", command=self.upload).grid(row=1, column=9, sticky=tk.SE+tk.N, columnspan=1, padx=(0,0))
+        ttk.Button(self.controls, text="clear", command=self.clear).grid(row=3, column=2, sticky=tk.SE+tk.N, columnspan=1)
         ttk.Label(self.controls, text="Translate:").grid(row=0, column=4, sticky=tk.SE+tk.NW, columnspan=2, padx=(15,0))
         ttk.Label(self.controls, text="x:").grid(row=1, column=4, sticky=tk.SE+tk.NW, columnspan=1, padx=(15, 0))
         ttk.Label(self.controls, text="y:").grid(row=2, column=4, sticky=tk.SE+tk.NW, columnspan=1, padx=(15, 0))
@@ -57,7 +55,7 @@ class UICurve(ttk.Frame):
         self.rotate_angle.grid(row=1, column=7, sticky=tk.SE+tk.NW, columnspan=1)
         ttk.Button(self.controls, text="rotate", command=self.rotate).grid(row=3, column=6, sticky=tk.SE+tk.NW, columnspan=2, padx=(15, 0))
         ttk.Button(self.controls, text="save", command=self.save).grid(row=2, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
-        ttk.Button(self.controls, text="new", command=self.new).grid(row=1, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
+        ttk.Button(self.controls, text="new", command=self.new).grid(row=1, column=8, sticky=tk.SE+tk.NW, columnspan=1, padx=(25, 0))
         ttk.Button(self.controls, text="delete", command=self.delete).grid(row=3, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
         self.select = ttk.Combobox(self.controls, state="readonly")
         self.select.bind("<<ComboboxSelected>>", self.selection)
@@ -94,6 +92,7 @@ class UICurve(ttk.Frame):
             else:
                 self.temp.vectors = list(self.temp.vectors)+vectors
                 self.temp.functions = self.sfunctions.get()
+                self.temp.name = self.sname.get()
                 self.temp.function = Function(start=save_start, end=end, string_function=evaluate)
                 self.load_curve(self.temp)
         else:
@@ -101,16 +100,30 @@ class UICurve(ttk.Frame):
     
     
     def upload(self, *args):
-        if self.cursor != -1:
-            rd = fd.askopenfilename(parent=self, title="Load Data", filetypes=(("CSV", "*.csv"),("CSV", "*.txt")))
-            if rd:
-                add = []
-                with open(rd, newline="") as file:
-                    reader = csv.reader(file, delimiter=",")
-                    for line in reader:
-                        add.append(Vector(*line))
-                self.temp.vectors = [*self.temp.vectors]+add
-                self.load_curve(self.temp)
+        rd = fd.askopenfilename(parent=self, title="Load Data", initialdir="C:\\Documents", filetypes=(("CSV", "*.csv"),("CSV", "*.txt")))
+        if rd:
+            response = askstring(title="Load", prompt="Load as one curve? (y/n)")
+            multiple = True
+            if response and response.lower() == "y":
+                multiple = False
+            file = open(rd)
+            try:
+                cc = Curve.build_from_io(file, multiple=multiple)
+            except Exception:
+                msg.showerror(parent=self, title="Error", message="Could not process selected file")
+            else:
+                name = rd[-rd[::-1].find("/"):-4]
+                if type(cc) == list:
+                    counter = 1
+                    for c in cc:
+                        c.name = name + f"{counter}"
+                        counter+=1
+                        self.curves.append(c)
+                else:
+                    cc.name = name
+                    self.curves.append(cc)
+                self.select["values"] = [c.name for c in self.curves]
+            file.close()
     
     
     def clear(self):
@@ -182,9 +195,8 @@ class UICurve(ttk.Frame):
         self.load_curve(self.temp)
         self.curves.append(ncurve)
         self.cursor = len(self.curves)-1
-        self.select["values"] = (*self.select["values"], name)
+        self.select["values"] = list((*self.select["values"], name))
         self.select.set(name)
-        #self.graphics.set_lims([0, 1], [0, 1])
     
     
     def selection(self, *args):

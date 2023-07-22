@@ -215,9 +215,9 @@ class Curve:
                     raise ValueError("Un able to process token: ", line[0])
                 else:
                     if multiple:
-                        vectors[-1].append(Vector(line[0], line[1]))
+                        vectors[-1].append(Vector(x, y))
                     else:
-                        vectors.append(Vector(line[0], line[1]))
+                        vectors.append(Vector(x, y))
         if multiple:
             curves = []
             for v in vectors:
@@ -303,7 +303,7 @@ class Link:
                 except ValueError:
                     raise ValueError("Un able to process token: ", line[0])
                 else:
-                    vectors[-1].append(Vector(line[0], line[1]))
+                    vectors[-1].append(Vector(x, y))
         
         curves = []
         for v in vectors:

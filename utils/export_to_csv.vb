@@ -48,7 +48,7 @@ Sub Main()
     		radius = arc.Radius
             
 			totalAngle = arc.SweepAngle
-			differential = totalAngle / 100
+			differential = totalAngle / 1000
 			For angle = arc.StartAngle + differential To arc.StartAngle + totalAngle Step differential
 				x = centerPoint.X + radius * Math.Cos(angle)
         		y = centerPoint.Y + radius * Math.Sin(angle)
