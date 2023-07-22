@@ -10,25 +10,41 @@ from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
 
 
-def plot_link(link:gm.Link):
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
+def plot_link(link:gm.Link, axes:Axes=None, show_connections:bool=False, grid:bool=False, resize:bool=False):
+    if axes:
+        ax = axes
+    else:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+    
     for curve in link.curves:
         ax.plot([vector.x for vector in curve.vectors], [vector.y for vector in curve.vectors])
-    miny, maxy = ax.get_ylim()
-    minx, maxx = ax.get_xlim()
+    if show_connections:
+        ax.scatter([vector.x for vector in link.connections], [vector.y for vector in link.connections], color="red")
     
-    minimun = min([miny, minx])
-    maximum = max([maxy, maxx])
+    if resize:
+        miny, maxy = ax.get_ylim()
+        minx, maxx = ax.get_xlim()
+        
+        minimun = min([miny, minx])
+        maximum = max([maxy, maxx])
+        
+        ax.set_xlim([minimun, maximum])
+        ax.set_ylim([minimun, maximum])
+    ax.grid(visible=grid)
     
-    ax.set_xlim([minimun, maximum])
-    ax.set_ylim([minimun, maximum])
+    if not grid:
+        ax.set_xticklabels([])
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_yticklabels([])
     
-    plt.show()
+    if not axes:
+        plt.show()
 
 
 
-def plot_mechanism(crank:gm.Link, coupler:gm.Link, output:gm.Link, ground:gm.Link, axes:Axes=None, colors=["red", "purple", "green", "orange", "blue", "black", "yellow"]):
+def plot_mechanism(crank:gm.Link, coupler:gm.Link, output:gm.Link, ground:gm.Link, axes:Axes=None, colors:List[str]=["red", "purple", "green", "orange", "blue", "black", "yellow"]):
     links = [crank, coupler, output, ground]
     
     if axes:
@@ -55,7 +71,7 @@ def plot_mechanism(crank:gm.Link, coupler:gm.Link, output:gm.Link, ground:gm.Lin
         plt.show()
 
 
-def plot_machine(mechanisms:List[List[gm.Link]], axes:Axes=None, colors=["red", "purple", "green", "orange", "blue", "black", "yellow"], mass_center:bool=False, max_stress:List[gm.Vector]=[]):
+def plot_machine(mechanisms:List[List[gm.Link]], axes:Axes=None, colors:List[str]=["red", "purple", "green", "orange", "blue", "black", "yellow"], mass_center:bool=False, max_stress:List[gm.Vector]=[]):
     if mass_center:
         for jindex, m in enumerate(mechanisms):
             for index, l in enumerate(m):
@@ -86,7 +102,7 @@ def plot_machine(mechanisms:List[List[gm.Link]], axes:Axes=None, colors=["red", 
         plt.show()
 
 
-def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colors=["red", "purple", "green", "orange", "blue", "black", "yellow"], axes:Axes=None, fig:Figure=None):
+def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colors:List[str]=["red", "purple", "green", "orange", "blue", "black", "yellow"], axes:Axes=None, fig:Figure=None):
     assert (axes == None and fig == None) or (axes != None and fig != None), "Assign both axes and figure or none"
     if axes:
         ax = axes
@@ -128,7 +144,7 @@ def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colo
         return anim
 
 
-def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-1.5, 7], [-2.5, 4]], colors=["red", "purple", "green", "orange", "blue", "black", "yellow"],\
+def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-1.5, 7], [-2.5, 4]], colors:List[str]=["red", "purple", "green", "orange", "blue", "black", "yellow"],\
                        axes:Axes=None, fig:Figure=None, animation_limits=(0, gm.pi*2), invert:bool=False, mass_center:bool=False, save=""):
     """
     Inversion can be either 0 for 0s list a 1 for 1s list or a list indicating the inversion for each mechanism

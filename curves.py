@@ -236,6 +236,8 @@ class UILink(ttk.Frame):
         self.supper = tk.StringVar(self)
         self.slower = tk.StringVar(self)
         self.bgrid = tk.BooleanVar(self)
+        self.bconnections = tk.BooleanVar(self)
+        self.bresize = tk.BooleanVar(self)
         #--------
         self.controls = tk.LabelFrame(self, text="Controls")
         self.controls.grid(row=10, column=0, rowspan=1, sticky=tk.SE+tk.NW, pady=(0, 2), padx=(2, 2))
@@ -259,19 +261,22 @@ class UILink(ttk.Frame):
         ttk.Button(self.controls, text="remove", command=self.remove_connection).grid(row=4, column=5, sticky=tk.SE+tk.NW, columnspan=1, padx=(25, 0))
         self.select_connection = ttk.Combobox(self.controls, state="readonly", width=5)
         self.select_connection.grid(row=4, column=6, sticky=tk.SE+tk.NW, columnspan=1)
-        ttk.Button(self.controls, text="save", command=self.save).grid(row=2, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
-        ttk.Button(self.controls, text="new", command=self.new).grid(row=1, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
-        ttk.Button(self.controls, text="delete", command=self.delete).grid(row=3, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
+        ttk.Button(self.controls, text="save", command=self.save).grid(row=2, column=9, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
+        ttk.Button(self.controls, text="new", command=self.new).grid(row=1, column=9, sticky=tk.SE+tk.NW, columnspan=1, padx=(25, 0))
+        ttk.Button(self.controls, text="Upload file", command=self.upload).grid(row=1, column=10, sticky=tk.SE+tk.N, columnspan=1, padx=(0,0))
+        ttk.Button(self.controls, text="delete", command=self.delete).grid(row=3, column=9, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
         self.select = ttk.Combobox(self.controls, state="readonly", values=[i.name for i in links])
         self.select.bind("<<ComboboxSelected>>", self.selection)
         self.select_connection.bind("<<ComboboxSelected>>", self.select_conn)
-        self.select.grid(row=0, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
+        self.select.grid(row=0, column=9, sticky=tk.SE+tk.NW, columnspan=2, padx=(25, 0))
         ttk.Label(self.controls, text="Upper Limits:").grid(row=4, column=0, sticky=tk.SE+tk.NW, padx=(0, 0), pady=(5, 0))
         ttk.Label(self.controls, text="Lower Limits:").grid(row=5, column=0, sticky=tk.SE+tk.NW, padx=(0, 0))
         ttk.Entry(self.controls, textvariable=self.supper).grid(row=4, column=1, sticky=tk.SE+tk.NW, columnspan=2, pady=(5, 0))
         ttk.Entry(self.controls, textvariable=self.slower).grid(row=5, column=1, sticky=tk.SE+tk.NW, columnspan=2)
         ttk.Button(self.controls, text="set", command=self.set_lims).grid(row=4, column=3, sticky=tk.SE+tk.NW, rowspan=2, pady=(5, 0))
-        ttk.Checkbutton(self.controls, text="show grid", variable=self.bgrid).grid(row=3, column=4, sticky=tk.E)
+        ttk.Checkbutton(self.controls, text="show grid", variable=self.bgrid).grid(row=1, column=8, sticky=tk.W, padx=(5, 0))
+        ttk.Checkbutton(self.controls, text="show connections", variable=self.bconnections).grid(row=2, column=8, sticky=tk.E,padx=(5, 0))
+        ttk.Checkbutton(self.controls, text="resize", variable=self.bresize).grid(row=0, column=8, sticky=tk.W, padx=(5, 0))
         self.curves_available()
         #----------------------------
     
@@ -355,6 +360,22 @@ class UILink(ttk.Frame):
                 self.sname.set(name)
             else:
                 msg.showerror(parent=self, title="Error", message="No link in workspace, create a new one or load an existing link")
+    
+    
+    def upload(self, *args):
+        rd = fd.askopenfilename(parent=self, title="Load Data", initialdir="C:\\Documents", filetypes=(("CSV", "*.csv"),("CSV", "*.txt")))
+        if rd:
+            file = open(rd)
+            try:
+                link = Link.build_from_io(file)
+            except Exception:
+                msg.showerror(parent=self, title="Error", message="Could not process selected file")
+            else:
+                name = rd[-rd[::-1].find("/"):-4]
+                link.name = name
+                self.links.append(link)
+                self.select["values"] = [l.name for l in self.links]
+            file.close()
     
     
     def save(self):
@@ -450,9 +471,8 @@ class UILink(ttk.Frame):
             if v:
                 self.slower.set(v[:-1])
         
-        if link.curves:
-            for c in link.curves:
-                self.graphics.static_drawing([[v.x for v in c.vectors], [v.y for v in c.vectors]], grid=self.bgrid.get())
+        graphics.plot_link(link, axes=self.graphics.axis, show_connections=self.bconnections.get(), grid=self.bgrid.get(), resize=self.bresize.get())
+        self.graphics.render()
 
 
 
