@@ -65,7 +65,7 @@ Sub Main()
 			radius = circle.Radius
 			center = circle.CenterSketchPoint.Geometry
 			stepSize = 0.01
-			For angle = 0 To PI Step stepSize
+			For angle = 0 To 2*PI Step stepSize
 				x = center.X + radius * Math.Cos(angle)
         		y = center.Y + radius * Math.Sin(angle)
 				coordinateData = coordinateData & x & ", " & y & vbCrLf

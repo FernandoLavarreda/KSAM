@@ -843,8 +843,8 @@ class SliderCrank:
         mv_coupler2 = crank.connections[self.connections[0][1]]-coupler2.connections[self.connections[1][0]]
         coupler.translate(mv_coupler.x, mv_coupler.y)
         coupler2.translate(mv_coupler2.x, mv_coupler2.y)
-        mv_out = coupler.connections[self.connections[0][1]]-output.connections[self.connections[0][0]]
-        mv_out2 = coupler2.connections[self.connections[0][1]]-output2.connections[self.connections[0][0]]
+        mv_out = coupler.connections[self.connections[1][1]]-output.connections[self.connections[2][0]]
+        mv_out2 = coupler2.connections[self.connections[1][1]]-output2.connections[self.connections[2][0]]
         output.translate(mv_out.x, mv_out.y)
         output2.translate(mv_out2.x, mv_out2.y)
         

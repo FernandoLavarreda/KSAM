@@ -485,6 +485,7 @@ class UIMechanism(ttk.Frame):
         self.cursor = -1
         self.temp = None
         self.moved = Vector(0, 0)
+        self.rotated = 0.0
         #Variables
         self.sname = tk.StringVar(self)
         self.slider = tk.StringVar(self)
@@ -640,19 +641,34 @@ class UIMechanism(ttk.Frame):
                                 differential_ = dx
                                 density_ = density
                                 stress_analysis = True
+                    """
+                    if self.temp:
+                        self.temp = Mechanism(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy(), self.links[ground].copy()],\
+                                  connections=[crank_connections, coupler_connections, output_connections, ground_connections], name=name, stress_analysis=stress_analysis, dx=differential_, density=density_, init=False)
+                        self.temp.moved = self.moved
+                        self.temp.translate(self.moved.x, self.moved.y)
+                        self.temp.rotate(rotation-self.rotated)
+                        self.temp.rotation = rotation
+                    else:"""
                     self.temp = Mechanism(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy(), self.links[ground].copy()],\
-                              connections=[crank_connections, coupler_connections, output_connections, ground_connections], name=name, stress_analysis=stress_analysis, dx=differential_, density=density_, init=False)
-                    self.temp.moved = self.moved
-                    self.temp.translate(self.moved.x, self.moved.y)
-                    self.temp.rotate(rotation-self.rotated)
+                              connections=[crank_connections, coupler_connections, output_connections, ground_connections], name=name, stress_analysis=stress_analysis, dx=differential_, density=density_, init=True)
+                    self.temp.moved = Vector(0, 0)
                     self.temp.rotation = rotation
                 else:
+                    """
+                    if self.temp:
+                        self.temp = SliderCrank(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy()],\
+                                    connections=[crank_connections, coupler_connections, output_connections], offset=offset, name=name, init=False)
+                        self.temp.moved = self.moved
+                        self.temp.translate(self.moved.x, self.moved.y)
+                        self.temp.rotate(rotation-self.rotated)
+                        self.temp.rotation = rotation
+                    else:"""
                     self.temp = SliderCrank(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy()],\
-                                connections=[crank_connections, coupler_connections, output_connections], offset=offset, name=name, init=False)
-                    self.temp.moved = self.moved
-                    self.temp.translate(self.moved.x, self.moved.y)
-                    self.temp.rotate(rotation-self.rotated)
+                                connections=[crank_connections, coupler_connections, output_connections], offset=offset, name=name, init=True)
+                    self.temp.moved = Vector(0, 0)
                     self.temp.rotation = rotation
+                
                 list_options = list(self.select["values"])
                 list_options[self.select.current()] = self.temp.name
                 self.select["values"] = tuple(list_options)
@@ -672,8 +688,16 @@ class UIMechanism(ttk.Frame):
             except AttributeError:
                 pass
         name = "new "+str(biggest)
+        available = [self.crank, self.coupler, self.output, self.ground]
+        
+        for option in available:
+            option.set('')
+        
+        for con in self.connections:
+            con.set('')
         
         self.temp = None
+        self.sname.set(name)
         self.load_mechanism(self.temp)
         self.mechanisms.append(self.temp)
         self.cursor = len(self.links)-1
@@ -703,6 +727,7 @@ class UIMechanism(ttk.Frame):
             i = available.index(comp.widget)
             self.connections[i*2]['values'] = [f'x:{v.x} y:{v.y}' for v in self.links[available[i].current()].connections]
             self.connections[i*2+1]['values'] = [f'x:{v.x} y:{v.y}' for v in self.links[available[i].current()].connections]
+            self.temp = None
         except ValueError:
             #Selection of mechanism, shouldn't happen
             pass
