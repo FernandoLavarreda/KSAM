@@ -23,6 +23,9 @@ Sub Main()
 		If Not sketch_num <= partDoc.ComponentDefinition.Sketches.Count
 			sketch_num = 1
 		End If
+		If sketch_num <= 0
+			sketch_num = partDoc.ComponentDefinition.Sketches.Count
+		End If
 	End If 
 	save_ = Applitcation
     sketch = partDoc.ComponentDefinition.Sketches.Item(sketch_num)
