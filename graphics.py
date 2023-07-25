@@ -10,15 +10,20 @@ from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
 
 
-def plot_link(link:gm.Link, axes:Axes=None, show_connections:bool=False, grid:bool=False, resize:bool=False):
+def plot_link(link:gm.Link, axes:Axes=None, show_connections:bool=False, grid:bool=False, resize:bool=False, color=""):
     if axes:
         ax = axes
     else:
         fig = plt.figure()
         ax = fig.add_subplot(111)
     
-    for curve in link.curves:
-        ax.plot([vector.x for vector in curve.vectors], [vector.y for vector in curve.vectors])
+    if color:
+        for curve in link.curves:
+            ax.plot([vector.x for vector in curve.vectors], [vector.y for vector in curve.vectors], color=color)
+    else:
+        for curve in link.curves:
+            ax.plot([vector.x for vector in curve.vectors], [vector.y for vector in curve.vectors])
+    
     if show_connections:
         ax.scatter([vector.x for vector in link.connections], [vector.y for vector in link.connections], color="red")
     

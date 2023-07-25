@@ -641,29 +641,11 @@ class UIMechanism(ttk.Frame):
                                 differential_ = dx
                                 density_ = density
                                 stress_analysis = True
-                    """
-                    if self.temp:
-                        self.temp = Mechanism(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy(), self.links[ground].copy()],\
-                                  connections=[crank_connections, coupler_connections, output_connections, ground_connections], name=name, stress_analysis=stress_analysis, dx=differential_, density=density_, init=False)
-                        self.temp.moved = self.moved
-                        self.temp.translate(self.moved.x, self.moved.y)
-                        self.temp.rotate(rotation-self.rotated)
-                        self.temp.rotation = rotation
-                    else:"""
                     self.temp = Mechanism(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy(), self.links[ground].copy()],\
                               connections=[crank_connections, coupler_connections, output_connections, ground_connections], name=name, stress_analysis=stress_analysis, dx=differential_, density=density_, init=True)
                     self.temp.moved = Vector(0, 0)
                     self.temp.rotation = rotation
                 else:
-                    """
-                    if self.temp:
-                        self.temp = SliderCrank(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy()],\
-                                    connections=[crank_connections, coupler_connections, output_connections], offset=offset, name=name, init=False)
-                        self.temp.moved = self.moved
-                        self.temp.translate(self.moved.x, self.moved.y)
-                        self.temp.rotate(rotation-self.rotated)
-                        self.temp.rotation = rotation
-                    else:"""
                     self.temp = SliderCrank(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy()],\
                                 connections=[crank_connections, coupler_connections, output_connections], offset=offset, name=name, init=True)
                     self.temp.moved = Vector(0, 0)
@@ -839,13 +821,15 @@ class UIMechanism(ttk.Frame):
 
 
 class UIMachine(ttk.Frame):
-    def __init__(self, master, mechanisms:List[Mechanism], machines:List[Machine]):
+    def __init__(self, master, links:List[Link], mechanisms:List[Mechanism], machines:List[Machine]):
         super().__init__(master)
+        self.links = links
         self.mechanisms = mechanisms
         self.machines = machines
         self.graphics = Graphics(self, (9.6, 6), row=0, column=0, columnspan=1, rowspan=10, dpi=100, title="")
         self.temp = None
         self.temp_mechanisms = []
+        self.background = []
         #Variables
         self.sname = tk.StringVar(self)
         self.angle_rotate = tk.DoubleVar(self)
@@ -875,26 +859,41 @@ class UIMachine(ttk.Frame):
         ttk.Label(self.controls, text="Inversion Array:").grid(row=2, column=2, columnspan=1, sticky=tk.SE+tk.NW, padx=(3, 0))
         ttk.Entry(self.controls, textvariable=self.sinversion_array).grid(row=3, column=2, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))
         
-        ttk.Checkbutton(self.controls, text="Save Image/Video", variable=self.bsave_image, onvalue=True, offvalue=False).grid(row=1, column=5, sticky=tk.SE+tk.NW, padx=(5, 0))
-        ttk.Label(self.controls, text="Input angle (°)").grid(row=2, column=4, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
-        ttk.Label(self.controls, textvariable=self.angle_rotate).grid(row=2, column=5, columnspan=1, sticky=tk.SE+tk.NW, padx=(0, 10))
-        ttk.Scale(self.controls, variable=self.angle_rotate, from_=0, to=360).grid(row=3, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
+        ttk.Checkbutton(self.controls, text="Save Image/Video", variable=self.bsave_image, onvalue=True, offvalue=False).grid(row=4, column=5, sticky=tk.SE+tk.NW, padx=(0, 10))
+        ttk.Label(self.controls, text="Input angle (°)").grid(row=0, column=4, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Label(self.controls, textvariable=self.angle_rotate).grid(row=0, column=5, columnspan=1, sticky=tk.SE+tk.NW, padx=(0, 10))
+        ttk.Scale(self.controls, variable=self.angle_rotate, from_=0, to=360).grid(row=1, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
         
-        ttk.Button(self.controls, text="Redraw", command=self.redraw).grid(row=4, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
-        ttk.Button(self.controls, text="Animate", command=self.animate).grid(row=5, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
+        ttk.Button(self.controls, text="Redraw", command=self.redraw).grid(row=2, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
+        ttk.Button(self.controls, text="Animate", command=self.animate).grid(row=3, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
         
-        ttk.Button(self.controls, text="new", command=self.new).grid(row=3, column=6, sticky=tk.SE+tk.NW, columnspan=2, padx=(15, 0))
-        ttk.Button(self.controls, text="save", command=self.save).grid(row=4, column=6, sticky=tk.SE+tk.NW, columnspan=2, padx=(15, 0))
-        ttk.Button(self.controls, text="delete", command=self.delete).grid(row=5, column=6, sticky=tk.SE+tk.NW, columnspan=2, padx=(15, 0))
+        ttk.Label(self.controls, text="Background:").grid(row=0, column=6, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
+        self.list_background = ttk.Combobox(self.controls, state="readonly")
+        self.list_background.grid(row=1, column=6, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
+        self.list_links = ttk.Combobox(self.controls, state="readonly")
+        self.list_links.grid(row=2, column=7, columnspan=1, sticky=tk.SE+tk.NW, padx=(0, 10))
+        
+        ttk.Button(self.controls, text="add", command=self.add_background).grid(row=2, column=6, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Button(self.controls, text="remove", command=self.remove_background).grid(row=3, column=6, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
+        
+        ttk.Button(self.controls, text="new", command=self.new).grid(row=2, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(15, 0))
+        ttk.Button(self.controls, text="save", command=self.save).grid(row=3, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(15, 0))
+        ttk.Button(self.controls, text="delete", command=self.delete).grid(row=4, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(15, 0))
         self.select = ttk.Combobox(self.controls, state="readonly", values=[i.name for i in machines])
         self.select.bind("<<ComboboxSelected>>", self.selection)
-        self.select.grid(row=2, column=6, sticky=tk.SE+tk.NW, columnspan=2, padx=(15, 0))
+        self.select.grid(row=1, column=8, sticky=tk.SE+tk.NW, columnspan=2, padx=(15, 0))
         self.mechanisms_available()
+    
+    
+    def links_available(self):
+        if self.links:
+            self.list_links["values"] = [v.name for v in self.links]
     
     
     def mechanisms_available(self):
         if self.mechanisms:
             self.available_mechanisms["values"] = [v.name for v in self.mechanisms]
+            
     
     
     def check_power_graph(self):
@@ -993,7 +992,7 @@ class UIMachine(ttk.Frame):
         
         self.temp = None
         self.machines.append(self.temp)
-        self.select["values"] = (*self.select["values"], name)
+        self.select["values"] = list(self.select["values"]) + [name,]
         self.select.set(name)
         self.load_machine(self.temp)
         self.temp_mechanisms = []
@@ -1040,7 +1039,10 @@ class UIMachine(ttk.Frame):
     def selection(self, *args):
         self.sinversion_array.set('1')
         self.load_machine(self.machines[self.select.current()])
-        self.temp = self.machines[self.select.current()].copy()
+        if self.machines[self.select.current()]:
+            self.temp = self.machines[self.select.current()].copy()
+        else:
+            self.temp = None
     
     
     def load_machine(self, machine:Machine, animate_:bool=False):
@@ -1074,7 +1076,12 @@ class UIMachine(ttk.Frame):
                     save_name = ""
                     if self.bsave_image.get():
                         save_name = fd.asksaveasfilename(parent=self, title="Save screen", filetypes=(("GIF", "gif"),), initialdir="C:", defaultextension="gif")
+                    
+                    for link in self.background:
+                        graphics.plot_link(link, self.graphics.axis, color="black")
+                    
                     animation = graphics.plot_rotation_mach(machine, frames=100, lims=[xlims, ylims], inversion=inversions, axes=self.graphics.axis, fig=self.graphics.fig, save=save_name)
+                
                 else:
                     save_name = ""
                     if self.bsave_image.get():
@@ -1083,11 +1090,33 @@ class UIMachine(ttk.Frame):
                         solution = machine.solution(self.angle_rotate.get()*pi/180, inversions)
                     except Exception as e:
                         msg.showerror(parent=self, title="Error", message=str(e))
+                    
+                    for link in self.background:
+                        graphics.plot_link(link, self.graphics.axis, color="black")
+                    
                     graphics.plot_machine(solution, self.graphics.axis)
                     if save_name:
                         self.graphics.fig.savefig(save_name)
                 
                 self.graphics.render()
+        else:
+            self.sinversion_array.set('')
+            self.spower_graph.set('')
+    
+    
+    def add_background(self, *args):
+        if self.list_links.current() != -1:
+            self.background.append(self.links[self.list_links.current()])
+            self.list_background["values"] = [link.name for link in self.background]
+    
+    
+    def remove_background(self, *args):
+        if self.list_background.current() != -1:
+            new_values = list(self.list_background["values"])
+            new_values.pop(self.list_background.current())
+            self.list_background["values"] = new_values
+            self.background.pop(self.list_background.current())
+            self.list_background.set('')
     
     
     def redraw(self, *args):
@@ -1221,7 +1250,7 @@ class UIStress(ttk.Frame):
     
     def machines_available(self):
         if self.machines:
-            self.select["values"] = [i.name for i in self.machines]
+            self.select["values"] = [i.name for i in self.machines if i]
     
 
 
@@ -1243,7 +1272,7 @@ class GUI(tk.Tk):
             "Curves": UICurve(self.notebook, self.curves),
             "Links":  UILink(self.notebook, self.curves, self.links),
             "Mechanisms": UIMechanism(self.notebook, self.links, self.mechanisms),
-            "Machines": UIMachine(self.notebook, self.mechanisms, self.machines),
+            "Machines": UIMachine(self.notebook, self.links, self.mechanisms, self.machines),
             "Stresses":UIStress(self.notebook, self.machines)
         }
         
@@ -1259,6 +1288,7 @@ class GUI(tk.Tk):
         self.pages["Links"].curves_available()
         self.pages["Mechanisms"].links_available()
         self.pages["Machines"].mechanisms_available()
+        self.pages["Machines"].links_available()
         self.pages["Stresses"].machines_available()
 
 
