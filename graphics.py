@@ -103,6 +103,12 @@ def plot_machine(mechanisms:List[List[gm.Link]], axes:Axes=None, colors:List[str
     miny, maxy = ax.get_ylim()
     minx, maxx = ax.get_xlim()
     
+    minimun = min([miny, minx])
+    maximum = max([maxy, maxx])
+    
+    ax.set_xlim([minimun, maximum])
+    ax.set_ylim([minimun, maximum])
+    
     if not axes:
         plt.show()
 

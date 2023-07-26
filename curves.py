@@ -964,7 +964,7 @@ class UIMachine(ttk.Frame):
             try:
                 pw_graph = self.check_power_graph()
                 name = self.sname.get()
-                self.temp = Machine(self.temp_mechanisms, pw_graph, name)
+                self.temp = Machine(self.temp_mechanisms, pw_graph, auto_adjust=True, name=name)
             except ValueError as e:
                 msg.showerror(parent=self, title="Error", message=str(e))
             except AssertionError as e:
