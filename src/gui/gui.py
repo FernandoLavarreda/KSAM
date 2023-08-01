@@ -4,16 +4,16 @@
 
 import re
 import csv
-from geometry import Function, Curve, Vector, Link, Mechanism, SliderCrank, Machine
-from typing import Tuple, List
 import tkinter as tk
 import tkinter.ttk as ttk
-from display import Graphics
+from graphics import graphics
+from .display import Graphics
+from typing import Tuple, List
 import tkinter.filedialog as fd
-from tkinter.simpledialog import askfloat, askstring
 import tkinter.messagebox as msg
 from math import sin, cos, tan, pi
-import graphics
+from tkinter.simpledialog import askfloat, askstring
+from mechanisms.geometry import Function, Curve, Vector, Link, Mechanism, SliderCrank, Machine
 
 
 class UICurve(ttk.Frame):

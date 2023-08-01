@@ -1,13 +1,22 @@
 #Fernando Jose Lavarreda Urizar
 #Program to analyze Mechanisms, Graduation Project UVG
 
-import geometry as gm
 from time import sleep
 from typing import List
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.animation import FuncAnimation
+
+
+if __name__ == "__main__":
+    import os
+    import sys
+    parent = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    sys.path.append(parent)
+    from examples import examples
+
+from mechanisms import geometry as gm
 
 
 def plot_link(link:gm.Link, axes:Axes=None, show_connections:bool=False, grid:bool=False, resize:bool=False, color=""):
@@ -248,8 +257,6 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-
 
 
 if __name__ == "__main__":
-    import sys
-    import examples
     
     if '1' in sys.argv:
         machine = examples.build_machine()

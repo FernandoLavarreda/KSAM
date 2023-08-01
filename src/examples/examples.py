@@ -1,7 +1,12 @@
 #Fernando Lavarreda Examples
 
+if __name__ == "__main__":
+    import os
+    import sys
+    parent = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    sys.path.append(parent)
 
-import geometry as gm
+from mechanisms import geometry as gm
 
 
 def build_machine():
@@ -168,7 +173,6 @@ def build_double_crank(pistons:int):
 
 if __name__ == "__main__":
     #Test forces, speeds
-    import sys
     
     if '1' in sys.argv:
         print("Calculting centroid, mass and moment of inertia from 'machine' crank")
