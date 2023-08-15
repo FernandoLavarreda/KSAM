@@ -141,9 +141,9 @@ def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colo
         for curve in link.curves:
             lines[-1].append(*ax.plot([vector.x for vector in curve.vectors], [vector.y for vector in curve.vectors], color=colors[color%len(colors)]))
         color+=1
-    
     def animate(i):
         radian = 2*gm.pi*i/frames
+        cc = mechanism.coupler_rad(radian)[inversion]
         solution = mechanism.solution(radian)[inversion]
         for link in range(4):
             counter = 0
@@ -155,7 +155,6 @@ def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colo
             for cc in ll:
                 ret.append(cc)
         return ret
-    
     anim = FuncAnimation(fig, animate, frames=frames, interval=20, blit=True)
     
     if not axes:

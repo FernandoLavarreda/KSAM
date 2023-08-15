@@ -94,6 +94,7 @@ class UICurve(ttk.Frame):
                 self.temp.functions = self.sfunctions.get()
                 self.temp.name = self.sname.get()
                 self.temp.function = Function(start=save_start, end=end, string_function=evaluate)
+                self.temp.computable_centroid = True
                 self.load_curve(self.temp)
         else:
             msg.showerror(parent=self, title="Error", message="Couldn't interpret expression")
@@ -292,9 +293,10 @@ class UILink(ttk.Frame):
                 msg.showerror(parent=self, title="Error", message="Not a number in the limits of the link")
             except IndexError:
                 msg.showerror(parent=self, title="Error", message=f"Limits must be between 1 and the curves available: {len(self.select_remove_curve['values'])}")
-        else:
-            self.temp.set_lims([i-1 for i in ups], 1)
-            self.temp.set_lims([i-1 for i in ups], 0)
+            
+            else:
+                self.temp.set_lims([i-1 for i in ups], 1)
+                self.temp.set_lims([i-1 for i in lower], 0)
     
     
     def select_conn(self, *args):

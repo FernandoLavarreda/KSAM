@@ -4,8 +4,8 @@
 import csv
 import numpy as np
 import numpy.linalg as linalg
-from typing import List, Tuple, Mapping, Callable
 from math import sin, cos, pi, sqrt, atan, atan2, asin
+from typing import List, Tuple, Mapping, Callable,TextIO
 
 
 def angle_rad(angle:float):
@@ -127,7 +127,7 @@ class Function:
     
     def __add__(self, other):
         """Create new Function from adding one from another"""
-        assert type(other) == type(self), "Can only substract self from other Function"
+        assert type(other) == type(self), "Can only add self from other Function"
         if self.start < other.start:
             start = other.start
         else:
@@ -147,7 +147,7 @@ class Function:
         """Create new Function from putting one next to the other, smallest start 
            Function has precedence. Undefined behaviour is out of bounds 
            for both functions (space in between) and therefore replaced with linear interpolation
-           between the last and first value of each one of the funcitons"""
+           between the last and first value of each one of the functions"""
         if self.start <= other.start:
             if self.end <  other.end:
                 if self.end < other.start:
@@ -197,7 +197,7 @@ class Curve:
     
     
     @staticmethod
-    def build_from_io(file_descriptor, delimiter=",", origin=Vector(0, 0), multiple=False):
+    def build_from_io(file_descriptor:TextIO, delimiter:str=",", origin:Vector=Vector(0, 0), multiple:bool=False):
         reader = csv.reader(file_descriptor, delimiter=delimiter)
         header = next(reader)
         vectors = []
@@ -285,7 +285,7 @@ class Link:
     
     
     @staticmethod
-    def build_from_io(file_descriptor, delimiter=",", origin=Vector(0, 0)):
+    def build_from_io(file_descriptor:TextIO, delimiter:str=",", origin:Vector=Vector(0, 0)):
         reader = csv.reader(file_descriptor, delimiter=delimiter)
         header = next(reader)
         vectors = []
