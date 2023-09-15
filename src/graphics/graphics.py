@@ -1,5 +1,6 @@
 #Fernando Jose Lavarreda Urizar
-#Program to analyze Mechanisms, Graduation Project UVG
+#Program to analyze Mechanisms, Graduation Project UVG, Free & Open Source
+
 
 from time import sleep
 from typing import List

@@ -1,3 +1,6 @@
+#Fernando Jose Lavarreda Urizar
+#Program to analyze Mechanisms, Graduation Project UVG, Free & Open Source
+
 
 import tkinter as tk
 from typing import Tuple, List

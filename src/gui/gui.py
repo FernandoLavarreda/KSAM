@@ -1,5 +1,5 @@
 #Fernando Jose Lavarreda Urizar
-#Program to analyze Mechanisms, Graduation Project UVG
+#Program to analyze Mechanisms, Graduation Project UVG, Free & Open Source
 
 
 import re
@@ -704,7 +704,11 @@ class UIMechanism(ttk.Frame):
     def selection(self, comp):
         if comp.widget == self.select:
             self.load_mechanism(self.mechanisms[self.select.current()])
-            self.temp = self.mechanisms[self.select.current()].copy()
+            if self.mechanisms[self.select.current()]:
+                self.temp = self.mechanisms[self.select.current()].copy()
+            else:
+                self.sname.set(self.select.get())
+                self.temp = None
             return
         try:
             available = [self.crank, self.coupler, self.output, self.ground]
@@ -894,7 +898,13 @@ class UIMachine(ttk.Frame):
     
     def mechanisms_available(self):
         if self.mechanisms:
-            self.available_mechanisms["values"] = [v.name for v in self.mechanisms]
+            names = []
+            for v in self.mechanisms:
+                if v:
+                    names.append(v.name)
+                else:
+                    names.append("Invalid")
+            self.available_mechanisms["values"] = names
             
     
     
@@ -1032,7 +1042,7 @@ class UIMachine(ttk.Frame):
     def add_mech(self):
         if self.available_mechanisms.current() != -1:
             if self.mechanisms[self.available_mechanisms.current()] == None:
-                msg.showerror(parent=self, title="Error", message="Cannot add a mechanism that has not been saved")
+                msg.showerror(parent=self, title="Error", message="Cannot add a mechanism that has not been saved properly (Invalid)")
                 return
             self.temp_mechanisms.append(self.mechanisms[self.available_mechanisms.current()].copy())
             self.integrating_mech["values"] = [*self.integrating_mech["values"], self.mechanisms[self.available_mechanisms.current()].name]

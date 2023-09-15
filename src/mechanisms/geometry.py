@@ -1,5 +1,6 @@
 #Fernando Jose Lavarreda Urizar
-#Program to analyze Mechanisms, Graduation Project UVG
+#Program to analyze Mechanisms, Graduation Project UVG, Free & Open Source
+
 
 import csv
 import numpy as np
@@ -1170,6 +1171,7 @@ class Machine:
                     normal_stress = local_x/link.areas[i]
                     total_normal_stress = abs(normal_stress)+abs(moment_stress)
                     vonMises = (total_normal_stress*total_normal_stress+3*shear_stress*shear_stress)**0.5
+                    
                     if vonMises>max_vonMises:
                         max_vonMises = vonMises
                         stresses = [shear_stress, normal_stress, moment_stress]
@@ -1177,6 +1179,7 @@ class Machine:
                             location = Vector(s*link.heights[i], -c*link.heights[i])+link.element_node_locations[i]
                         else:
                             location = Vector(-s*link.heights[i], c*link.heights[i])+link.element_node_locations[i]
+                    
                 link_+=1
                 final_stresses_.append(stresses)
                 vonMises_.append(max_vonMises)

@@ -1,5 +1,7 @@
 'Fernando Lavarreda
+'Program to analyze Mechanisms, Graduation Project UVG, Free & Open Source
 'Export Inventor sketch to csv, by diffault pick the first sketch
+
 Sub Main()
     Dim partDoc As PartDocument
     partDoc = ThisApplication.ActiveDocument
