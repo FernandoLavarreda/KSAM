@@ -68,10 +68,10 @@ def vector_angle(a:Vector, b:Vector):
     return atan2(b.y-a.y, b.x-a.x)
 
 
-def build_callable_function(string:str):
+def build_callable_function(string:str, variable="x"):
     """Build function from string"""
     def function(x:float):
-        call = string.replace("x", str(x))
+        call = string.replace(variable, str(x))
         return eval(call)
     return function
 
@@ -551,7 +551,7 @@ class Mechanism:
             solution_b = 2*atan((-B-sqrt(B*B-4*A*C))/2/A)
         except ValueError:
             if (B*B-4*A*C) < -1e-15:
-                raise ValueError("Crank can't be put in that position")
+                raise ValueError(f"Crank can't be put in that position: {input_rad}")
             else:
                 solution_a = 2*atan((-B)/2/A)
                 solution_b = solution_a
@@ -585,7 +585,7 @@ class Mechanism:
             solution_a = 2*atan((-E+sqrt(E*E-4*D*F))/2/D)
             solution_b = 2*atan((-E-sqrt(E*E-4*D*F))/2/D)
         except ValueError:
-            raise ValueError("Crank can't be put in that position")
+            raise ValueError(f"Crank can't be put in that position: {input_rad}")
         
         return solution_a, solution_b
     
@@ -779,7 +779,7 @@ class SliderCrank:
             solution_a = asin((self.a*sin(input_rad)-self.c)/self.b)
             solution_b = asin(-(self.a*sin(input_rad)-self.c)/self.b)+pi
         except ValueError:
-            raise ValueError("Crank can't be put in that position")
+            raise ValueError(f"Crank can't be put in that position: {input_rad}")
         
         return solution_a, solution_b
     

@@ -40,7 +40,7 @@ class Graphics():
         self.render()
     
     
-    def make_animation(self, sequence:Tuple[List[List[float]], List[List[float]]], *, time_out:float=0):
+    def make_animation(self, sequence:Tuple[List[List[float]], List[List[float]]], *, time_out:float=0, grid=False):
         line = self.axis.plot(sequence[0][0], sequence[1][0])[0]
         if len(str(self.axis.get_yticks()[0]))>4:
             self.axis.set_yticklabels(self.axis.get_yticks(), rotation=70)

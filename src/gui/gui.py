@@ -13,7 +13,45 @@ import tkinter.filedialog as fd
 import tkinter.messagebox as msg
 from math import sin, cos, tan, pi
 from tkinter.simpledialog import askfloat, askstring
-from mechanisms.geometry import Function, Curve, Vector, Link, Mechanism, SliderCrank, Machine
+from mechanisms.geometry import Function, Curve, Vector, Link, Mechanism, SliderCrank, Machine,build_callable_function
+
+
+def func(function:str, independent_var="x"):
+    """
+    Determine if a function is valid
+    """
+    m = re.match("[\d|\.|(sin)|(cos)|(tan)|"+independent_var+"|\*|\+|\-|/|\(|\)]*\{(-?\d+\.?\d*,\s*){2}(\d+\s*){1}\}", function)
+    vectors = []
+    if m != None:
+        evaluate = m.group()
+        limits = re.findall("-?\d+\.?\d*", evaluate)[-3:]
+        evaluate = evaluate[:evaluate.find('{')]
+        start = float(limits[0])
+        end = float(limits[1])
+        samples = int(limits[2])
+        save_start = start
+        if start>=end:
+            return False, "End can't be smaller than beginning \n(limits of the function)", None
+        try:
+            dx = (end-start)/samples
+            for i in range(samples):
+                result = eval(evaluate.replace(independent_var, "("+str(start)+")"))
+                vectors.append(Vector(start, result))
+                start+=dx
+            vectors.append(Vector(end, eval(evaluate.replace(independent_var, "("+str(end)+")"))))
+        except Exception as e:
+            return False, "Couldn't evaluate expression", None
+        else:
+            
+            if independent_var!="x":
+                function = Function(start=save_start, end=end, string_function=evaluate)
+                function.func = build_callable_function(evaluate, independent_var)
+            else:
+                function = Function(start=save_start, end=end, string_function=evaluate)
+            return vectors, "Successful", function
+    
+    else:
+        return False, "Couldn't interpret expression", None
 
 
 class UICurve(ttk.Frame):
@@ -67,37 +105,16 @@ class UICurve(ttk.Frame):
     
     
     def func(self, *args):
-        m = re.match("[\d|\.|(sin)|(cos)|(tan)|x|\*|\+|\-|/|\(|\)]*\{(-?\d+\.?\d*,\s*){2}(\d+\s*){1}\}", self.sfunctions.get())
-        vectors = []
-        if m != None:
-            evaluate = m.group()
-            limits = re.findall("-?\d+\.?\d*", evaluate)[-3:]
-            evaluate = evaluate[:evaluate.find('{')]
-            start = float(limits[0])
-            end = float(limits[1])
-            samples = int(limits[2])
-            save_start = start
-            if start>=end:
-                msg.showerror(parent=self, title="Error", message="End can't be smaller than beginning \n(limits of the function)")
-                return
-            try:
-                dx = (end-start)/samples
-                for i in range(samples):
-                    result = eval(evaluate.replace("x", "("+str(start)+")"))
-                    vectors.append(Vector(start, result))
-                    start+=dx
-                vectors.append(Vector(end, eval(evaluate.replace("x", "("+str(end)+")"))))
-            except Exception as e:
-                msg.showerror(parent=self, title="Error", message="Couldn't evaluate expression")
-            else:
-                self.temp.vectors = list(self.temp.vectors)+vectors
-                self.temp.functions = self.sfunctions.get()
-                self.temp.name = self.sname.get()
-                self.temp.function = Function(start=save_start, end=end, string_function=evaluate)
-                self.temp.computable_centroid = True
-                self.load_curve(self.temp)
+        result, message, temp_function = func(self.sfunctions.get())
+        if result:
+            self.temp.vectors = list(self.temp.vectors)+result
+            self.temp.functions = self.sfunctions.get()
+            self.temp.name = self.sname.get()
+            self.temp.function = temp_function
+            self.temp.computable_centroid = True
+            self.load_curve(self.temp)
         else:
-            msg.showerror(parent=self, title="Error", message="Couldn't interpret expression")
+            msg.showerror(parent=self, title="Error", message=message)
     
     
     def upload(self, *args):
@@ -493,6 +510,7 @@ class UIMechanism(ttk.Frame):
         self.slider = tk.StringVar(self)
         self.soffset = tk.StringVar(self)
         self.srotation = tk.StringVar(self)
+        self.sfunction_animate = tk.StringVar(self)
         self.angle_rotate = tk.DoubleVar(self)
         self.inversion = tk.IntVar(self)
         self.stress_analysis = tk.IntVar(self)
@@ -527,6 +545,8 @@ class UIMechanism(ttk.Frame):
             con.grid(row=i//2+2, column=i%2+2, sticky=tk.SE+tk.NW, padx=((i+1)%2*20, 0))
         
         
+        ttk.Label(self.controls, text="Input function (optional):").grid(row=1, column=4, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Entry(self.controls, textvariable=self.sfunction_animate).grid(row=1, column=5, sticky=tk.SE+tk.NW, padx=(0, 15))
         ttk.Label(self.controls, text="Input angle (°)").grid(row=2, column=4, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
         ttk.Label(self.controls, textvariable=self.angle_rotate).grid(row=2, column=5, columnspan=1, sticky=tk.SE+tk.NW, padx=(0, 10))
         ttk.Scale(self.controls, variable=self.angle_rotate, from_=0, to=360).grid(row=3, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
@@ -803,7 +823,23 @@ class UIMechanism(ttk.Frame):
         self.change_type()
         
         if animate_:
-            animation = graphics.plot_rotation_mech(mechanism, frames=100, inversion=self.inversion.get(), axes=self.graphics.axis, fig=self.graphics.fig)
+            if self.sfunction_animate.get().strip():
+                var = self.sfunction_animate.get().strip() #Not walrus operator to allow for backwards compatibility
+                result, message, callable_f = func(var, "time")
+                if result:
+                    dt = (callable_f.end-callable_f.start)/len(result)
+                    radians = [callable_f(dt*i+callable_f.start) for i, _ in enumerate(result)]+[callable_f(callable_f.end),]
+                    try:
+                        animation = graphics.plot_rotation_mech(mechanism, frames=len(result), inversion=self.inversion.get(), animation_function=radians, axes=self.graphics.axis, fig=self.graphics.fig)
+                    except ValueError as e:
+                        msg.showerror(parent=self, title="Error", message="Could not solve mechanism:\n"+str(e))
+                else:
+                    msg.showerror(parent=self, title="Error", message="Invalid input function use 'time' as independent variable\n"+message)
+            else:
+                try:
+                    animation = graphics.plot_rotation_mech(mechanism, frames=100, inversion=self.inversion.get(), axes=self.graphics.axis, fig=self.graphics.fig)
+                except ValueError as e:
+                        msg.showerror(parent=self, title="Error", message="Could not solve mechanism:\n"+str(e))
         else:
             solution = mechanism.solution(self.angle_rotate.get()*pi/180)[self.inversion.get()]
             graphics.plot_mechanism(*solution, self.graphics.axis)
@@ -838,6 +874,7 @@ class UIMachine(ttk.Frame):
         self.background = []
         #Variables
         self.sname = tk.StringVar(self)
+        self.sfunction_animate = tk.StringVar(self)
         self.angle_rotate = tk.DoubleVar(self)
         self.bsave_image = tk.BooleanVar(self)
         self.spower_graph = tk.StringVar(self)
@@ -865,13 +902,15 @@ class UIMachine(ttk.Frame):
         ttk.Label(self.controls, text="Inversion Array:").grid(row=2, column=2, columnspan=1, sticky=tk.SE+tk.NW, padx=(3, 0))
         ttk.Entry(self.controls, textvariable=self.sinversion_array).grid(row=3, column=2, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))
         
-        ttk.Checkbutton(self.controls, text="Save Image/Video", variable=self.bsave_image, onvalue=True, offvalue=False).grid(row=4, column=5, sticky=tk.SE+tk.NW, padx=(0, 10))
-        ttk.Label(self.controls, text="Input angle (°)").grid(row=0, column=4, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
-        ttk.Label(self.controls, textvariable=self.angle_rotate).grid(row=0, column=5, columnspan=1, sticky=tk.SE+tk.NW, padx=(0, 10))
-        ttk.Scale(self.controls, variable=self.angle_rotate, from_=0, to=360).grid(row=1, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
+        ttk.Label(self.controls, text="Input function (optional):").grid(row=0, column=4, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Entry(self.controls, textvariable=self.sfunction_animate).grid(row=0, column=5, sticky=tk.E+tk.W, padx=(0, 10))
+        ttk.Checkbutton(self.controls, text="Save Image/Video", variable=self.bsave_image, onvalue=True, offvalue=False).grid(row=5, column=5, sticky=tk.SE+tk.NW, padx=(0, 10))
+        ttk.Label(self.controls, text="Input angle (°)").grid(row=1, column=4, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Label(self.controls, textvariable=self.angle_rotate).grid(row=1, column=5, columnspan=1, sticky=tk.SE+tk.NW, padx=(0, 10))
+        ttk.Scale(self.controls, variable=self.angle_rotate, from_=0, to=360).grid(row=2, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
         
-        ttk.Button(self.controls, text="Redraw", command=self.redraw).grid(row=2, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
-        ttk.Button(self.controls, text="Animate", command=self.animate).grid(row=3, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
+        ttk.Button(self.controls, text="Redraw", command=self.redraw).grid(row=3, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
+        ttk.Button(self.controls, text="Animate", command=self.animate).grid(row=4, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
         
         ttk.Label(self.controls, text="Background:").grid(row=0, column=6, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 10))
         self.list_background = ttk.Combobox(self.controls, state="readonly")
@@ -1092,7 +1131,23 @@ class UIMachine(ttk.Frame):
                     for link in self.background:
                         graphics.plot_link(link, self.graphics.axis, color="black")
                     
-                    animation = graphics.plot_rotation_mach(machine, frames=100, lims=[xlims, ylims], inversion=inversions, axes=self.graphics.axis, fig=self.graphics.fig, save=save_name)
+                    if self.sfunction_animate.get().strip():
+                        var = self.sfunction_animate.get().strip() #Not walrus operator to allow for backwards compatibility
+                        result, message, callable_f = func(var, "time")
+                        if result:
+                            dt = (callable_f.end-callable_f.start)/len(result)
+                            radians = [callable_f(dt*i+callable_f.start) for i, _ in enumerate(result)]+[callable_f(callable_f.end),]
+                            try:
+                                animation = graphics.plot_rotation_mach(machine, frames=len(result), lims=[xlims, ylims], inversion=inversions, animation_function=radians, axes=self.graphics.axis, fig=self.graphics.fig, save=save_name)
+                            except ValueError as e:
+                                msg.showerror(parent=self, title="Error", message="Could not solve machine:\n"+str(e))
+                        else:
+                            msg.showerror(parent=self, title="Error", message="Invalid input function use 'time' as independent variable\n"+message)
+                    else:
+                        try:
+                            animation = graphics.plot_rotation_mach(machine, frames=100, lims=[xlims, ylims], inversion=inversions, axes=self.graphics.axis, fig=self.graphics.fig, save=save_name)
+                        except ValueError as e:
+                            msg.showerror(parent=self, title="Error", message="Could not solve machine:\n"+str(e))
                 
                 else:
                     save_name = ""

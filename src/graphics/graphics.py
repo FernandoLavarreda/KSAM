@@ -123,7 +123,8 @@ def plot_machine(mechanisms:List[List[gm.Link]], axes:Axes=None, colors:List[str
         plt.show()
 
 
-def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colors:List[str]=["red", "purple", "green", "orange", "blue", "black", "yellow"], axes:Axes=None, fig:Figure=None):
+def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colors:List[str]=["red", "purple", "green", "orange", "blue", "black", "yellow"], axes:Axes=None,\
+                       fig:Figure=None, animation_function:List[float]=[]):
     assert (axes == None and fig == None) or (axes != None and fig != None), "Assign both axes and figure or none"
     if axes:
         ax = axes
@@ -142,8 +143,15 @@ def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colo
         for curve in link.curves:
             lines[-1].append(*ax.plot([vector.x for vector in curve.vectors], [vector.y for vector in curve.vectors], color=colors[color%len(colors)]))
         color+=1
+    
     def animate(i):
-        radian = 2*gm.pi*i/frames
+        if animation_function:
+            if i < len(animation_function):
+                radian = animation_function[i]
+            else:
+                radian = animation_function[i%len(animation_function)]
+        else:
+            radian = 2*gm.pi*i/frames
         cc = mechanism.coupler_rad(radian)[inversion]
         solution = mechanism.solution(radian)[inversion]
         for link in range(4):
@@ -156,6 +164,7 @@ def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colo
             for cc in ll:
                 ret.append(cc)
         return ret
+    
     anim = FuncAnimation(fig, animate, frames=frames, interval=20, blit=True)
     
     if not axes:
@@ -165,7 +174,7 @@ def plot_rotation_mech(mechanism:gm.Mechanism, frames:int, inversion:int=0, colo
 
 
 def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-1.5, 7], [-2.5, 4]], colors:List[str]=["red", "purple", "green", "orange", "blue", "black", "yellow"],\
-                       axes:Axes=None, fig:Figure=None, animation_limits=(0, gm.pi*2), invert:bool=False, mass_center:bool=False, save=""):
+                       axes:Axes=None, fig:Figure=None, animation_limits=(0, gm.pi*2), animation_function:List[float]=[], mass_center:bool=False, save=""):
     """
     Inversion can be either 0 for 0s list a 1 for 1s list or a list indicating the inversion for each mechanism
     """
@@ -208,13 +217,12 @@ def plot_rotation_mach(machine:gm.Machine, frames:int, inversion:int=0, lims=[[-
             color+=1
         current_mech+=1
     
-    
     def animate(i):
-        if invert:
-            if i >= frames/2:
-                radian = animation_limits[1]-(animation_limits[1]-animation_limits[0])*(i/frames-0.5)*2
+        if animation_function:
+            if i < len(animation_function):
+                radian = animation_function[i]
             else:
-                radian = (animation_limits[1]-animation_limits[0])*2*i/frames+animation_limits[0]
+                radian = animation_function[i%len(animation_function)]
         else:
             radian = (animation_limits[1]-animation_limits[0])*i/frames+animation_limits[0]
         solution = machine.solution(radian, inversion)
