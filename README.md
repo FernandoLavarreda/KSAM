@@ -41,7 +41,7 @@ line using the function: 4{0, 2, 2}. The __Functions__ entry allows: constants (
 be connected by a line that goes from the last function vector to the first vector in the next function entered) to clear the screen just press *__clear__*. Bear in mind that a rotation (always done around (0, 0)) and/or translation of a function will make it non 
 suitable for stress analysis. Press *__delete__* to remove a selected curve. The Upload file functionality will be addressed in the next section.
 
-![image](https://github.com/FernandoLavarreda/KSAM/assets/70668651/e8abfb8f-b0d8-4b54-af61-556c1cabd5b3)
+![image](https://github.com/FernandoLavarreda/KSAM/assets/70668651/3400e18a-566f-467d-8d0e-e11ec3b5be37)
 
 #### Screen Two: Links
 This screen is designed to build the links of a mechanism. If you click on the dropdown menu at the far right a series of links are already present, click them to see a preview. To create a new link press *__new__*. Then rename it to test_link, on the __Curves__ section
@@ -55,7 +55,7 @@ domain and range (otherwise inaccurate results will be presented).
 The connections are the joints of the link. To make it easier to place them select all the checkboxes, then select the *test_link* again in the dropdown. Enter x:0 y:0, then press add, then enter x:0 y:2, press *__save__* and select the link again. The connections should
 appear as red dots on the preview. To see the values of each connection select them on the drowdown menu next to the button *__remove__*. The distance between the connections is the effective length of each link.
 
-![image](https://github.com/FernandoLavarreda/KSAM/assets/70668651/d1563ef7-0087-4b04-98a9-3d991337dd05)
+![image](https://github.com/FernandoLavarreda/KSAM/assets/70668651/bb2fea06-f4de-4278-a677-9b219c571ddc)
 
 ##### Upload file | Utils
 Since the construction of visually appealing mechanisms is difficult using KSAM it has the ability to process csv files. In the utils directory in src an iLogic rule has been added to make it possible to generate the desired csv format through Inventor®. This tool 
@@ -81,8 +81,7 @@ radians [0, 2pi] (one hundred). This can be altered with a function just like th
 
 ![mechanism-mass-center](examples/piston_sinusoidal_input.gif#center)
 
-![image](https://github.com/FernandoLavarreda/KSAM/assets/70668651/aee77806-d6ab-4e0c-8f06-40ca5209960d)
-
+![image](https://github.com/FernandoLavarreda/KSAM/assets/70668651/aa14992a-dfe6-4e03-b263-b5a3078c113e)
 
 ### Screen Four: Machines
 A machine was defined as one or more mechanisms that interact with each other. Again, like in the previuos screens: a series of examples are present to mess around with. Now lets create a new one, press *__new__* and rename it to *test_machine*. In the section 
@@ -94,12 +93,12 @@ subsection __Upload file__). Now press *__save__*, then press *__Animate__*. The
 enter 1 in the __Inversion Array__ and edit the power graph to be *0{1}* (*important* notice that mechanism 1 must always be powered by its crank). Then press *__save__*. Here the animation can be saved by selecting the checkbox before clicking 
 *__Redraw__* | *__Animate__*. 
 
-![image](https://github.com/FernandoLavarreda/KSAM/assets/70668651/869bba56-5b56-42ab-b146-8c76d22a09c6)
+![image](https://github.com/FernandoLavarreda/KSAM/assets/70668651/c55dc235-7169-4e0c-9944-63fc8edd7cfc)
 
 ### Screen Five: Stresses
 This screen determines the maximum Equivalent von Mises Stress for each link. Select *test_machine* enter an input angle of 10°, angular speed 1 (remember working rad/s to get *Pa*), angular acceleration of 0.5 (rad/s^2 to get *Pa*). Inversion array 1, External moments couplers 2.5 (N-m to get *Pa*). Leave outputs empty. Then select both checkboxes and press *__Solve__*, you will be promted to select a location to save the report save it with the name report and wait for the solutions to be computed. This report can be later opened in the web browser. The green dots indicate the regions of max stress, the red dots are the mass centers for wich the accelerations are provided, the values of the report are in N, Pa, m/s^2 and rad/s^2 as long as the conventions for the other inputs have been followed.
 
-![image](https://github.com/FernandoLavarreda/KSAM/assets/70668651/db20475d-1af0-4218-93e2-ba86e77fd9b6)
+![image](https://github.com/FernandoLavarreda/KSAM/assets/70668651/43b02427-0964-46f9-a0e1-98962e62a9fe)
 
 
 ## References
