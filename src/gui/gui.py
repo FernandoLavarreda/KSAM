@@ -666,7 +666,7 @@ class UIMechanism(ttk.Frame):
                     self.temp = Mechanism(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy(), self.links[ground].copy()],\
                               connections=[crank_connections, coupler_connections, output_connections, ground_connections], name=name, stress_analysis=stress_analysis, dx=differential_, density=density_, init=True)
                     self.temp.moved = Vector(0, 0)
-                    self.temp.rotation = rotation
+                    self.temp.rotation = self.links[ground].rotation
                 else:
                     self.temp = SliderCrank(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy()],\
                                 connections=[crank_connections, coupler_connections, output_connections], offset=offset, name=name, init=True)

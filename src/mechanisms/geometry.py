@@ -497,21 +497,21 @@ class Mechanism:
     def initial_placement(self):
         """This method allows to change the rotation and position of a mechanism that has already been created
            Useful when copying a mechanism and desiring to change rotation and location of the new one"""
-        self.links[3].rotate(self.rotation)
         self.idisplacement = self.origin-self.links[3].connections[self.connections[3][0]]
         self.links[3].translate(self.idisplacement.x, self.idisplacement.y)
-        
+        self.links[3].rotate(self.rotation)
+        ground_rotation = vector_angle(self.links[3].connections[self.connections[3][0]], self.links[3].connections[self.connections[3][1]])
         for i in range(3):
             
             if i == 2:
                 self.links[i].translate(-self.links[i].connections[self.connections[i][1]].x, -self.links[i].connections[self.connections[i][1]].y)
-                self.links[i].rotate(vector_angle(self.links[i].connections[self.connections[i][1]], self.links[i].connections[self.connections[i][0]])+self.rotation+pi)
+                self.links[i].rotate(-vector_angle(self.links[i].connections[self.connections[i][1]], self.links[i].connections[self.connections[i][0]])+ground_rotation)
                 #Do not know why but this fixed the error
-                if abs(vector_angle(self.links[i].connections[self.connections[i][1]], self.links[i].connections[self.connections[i][0]])+self.rotation+pi-pi*2)<1e-10:
-                    self.links[i].rotate(pi)
+                #if abs(vector_angle(self.links[i].connections[self.connections[i][1]], self.links[i].connections[self.connections[i][0]])+self.rotation+pi-pi*2)<1e-10:
+                #    self.links[i].rotate(pi)
             else:
                 self.links[i].translate(-self.links[i].connections[self.connections[i][0]].x, -self.links[i].connections[self.connections[i][0]].y)
-                self.links[i].rotate(-vector_angle(self.links[i].connections[self.connections[i][0]], self.links[i].connections[self.connections[i][1]])+self.rotation)
+                self.links[i].rotate(-vector_angle(self.links[i].connections[self.connections[i][0]], self.links[i].connections[self.connections[i][1]])+ground_rotation)
     
     
     def copy(self):
