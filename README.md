@@ -97,11 +97,10 @@ enter 1 in the __Inversion Array__ and edit the power graph to be *0{1}* (*impor
 ![image](https://github.com/FernandoLavarreda/KSAM/assets/70668651/869bba56-5b56-42ab-b146-8c76d22a09c6)
 
 ### Screen Five: Stresses
-This screen determines the maximum Equivalent von Mises Stress for each link. Select *test_machine* enter an input angle of 10°, angular speed 1 (remember working rad/s to get *Pa*), angular acceleration of 0.5 (rad/s^2 to get *Pa*). Inversion array 1, External moments
-couplers 2.5 (N-m to get *Pa*). Leave outputs empty. Then select both checkboxes and press *__Solve__*, you will be promted to select a location to save the report save it with the name report and wait for the solutions to be computed. This report can be later opened 
-in the web browser. The green dots indicate the regions of max stress, the red dots are the mass centers for wich the accelerations are provided, the values of the report are in N, Pa, m/s^2 and rad/s^2 as long as the conventions for the other inputs have been followed.
+This screen determines the maximum Equivalent von Mises Stress for each link. Select *test_machine* enter an input angle of 10°, angular speed 1 (remember working rad/s to get *Pa*), angular acceleration of 0.5 (rad/s^2 to get *Pa*). Inversion array 1, External moments couplers 2.5 (N-m to get *Pa*). Leave outputs empty. Then select both checkboxes and press *__Solve__*, you will be promted to select a location to save the report save it with the name report and wait for the solutions to be computed. This report can be later opened in the web browser. The green dots indicate the regions of max stress, the red dots are the mass centers for wich the accelerations are provided, the values of the report are in N, Pa, m/s^2 and rad/s^2 as long as the conventions for the other inputs have been followed.
 
-![image](https://github.com/FernandoLavarreda/KSAM/assets/70668651/90986a9e-a312-4f82-bcbd-3ce8e3d8fc50)
+![image](https://github.com/FernandoLavarreda/KSAM/assets/70668651/db20475d-1af0-4218-93e2-ba86e77fd9b6)
+
 
 ## References
 1. Norton, R. L. (2012). Design of machinery: An introduction to the synthesis and analysis of mechanisms and machines (5. ed). McGraw-Hill.
