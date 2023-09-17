@@ -13,7 +13,7 @@ import tkinter.filedialog as fd
 import tkinter.messagebox as msg
 from math import sin, cos, tan, pi
 from tkinter.simpledialog import askfloat, askstring
-from mechanisms.geometry import Function, Curve, Vector, Link, Mechanism, SliderCrank, Machine,build_callable_function
+from mechanisms.geometry import Function, Curve, Vector, Link, Mechanism, SliderCrank, Machine, build_callable_function, vector_angle
 
 
 def func(function:str, independent_var="x"):
@@ -231,7 +231,13 @@ class UICurve(ttk.Frame):
         self.smovey.set("0")
         self.srotate.set("0")
         if len(curve.vectors):
-            self.graphics.static_drawing([[v.x for v in curve.vectors], [v.y for v in curve.vectors]])
+            xs = [v.x for v in curve.vectors]
+            ys = [v.y for v in curve.vectors]
+            self.graphics.static_drawing([xs, ys])
+            max_ = max(xs+ys)+0.05
+            min_ = min(xs+ys)-0.05
+            self.graphics.set_lims(xlims=(min_, max_), ylims=(min_,max_))
+            self.graphics.render()
 
 
 
@@ -666,7 +672,7 @@ class UIMechanism(ttk.Frame):
                     self.temp = Mechanism(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy(), self.links[ground].copy()],\
                               connections=[crank_connections, coupler_connections, output_connections, ground_connections], name=name, stress_analysis=stress_analysis, dx=differential_, density=density_, init=True)
                     self.temp.moved = Vector(0, 0)
-                    self.temp.rotation = self.links[ground].rotation
+                    self.temp.rotation = vector_angle(self.temp.links[3].connections[ground_connections[0]], self.temp.links[3].connections[ground_connections[1]])
                 else:
                     self.temp = SliderCrank(origin=Vector(0, 0), rotation=rotation, links=[self.links[crank].copy(), self.links[coupler].copy(), self.links[output].copy()],\
                                 connections=[crank_connections, coupler_connections, output_connections], offset=offset, name=name, init=True)
@@ -1231,7 +1237,7 @@ class UIStress(ttk.Frame):
         ttk.Entry(self.controls, textvariable=self.sangular_acceleration).grid(row=4, column=1, columnspan=1, sticky=tk.SE+tk.NW)
         ttk.Label(self.controls, text="Inversion Array:").grid(row=0, column=2, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
         ttk.Entry(self.controls, textvariable=self.sinversion_array).grid(row=1, column=2, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))
-        ttk.Label(self.controls, text="External Moments Cranks:").grid(row=2, column=2, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
+        ttk.Label(self.controls, text="External Moments Outputs:").grid(row=2, column=2, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
         ttk.Entry(self.controls, textvariable=self.smoments_array).grid(row=3, column=2, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))
         ttk.Label(self.controls, text="External Moments Couplers:").grid(row=2, column=4, columnspan=1, sticky=tk.SE+tk.NW, padx=(10, 0))
         ttk.Entry(self.controls, textvariable=self.smoments_array_coupler).grid(row=3, column=4, columnspan=2, sticky=tk.SE+tk.NW, padx=(10, 0))

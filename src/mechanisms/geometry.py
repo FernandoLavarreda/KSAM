@@ -477,6 +477,8 @@ class Mechanism:
             assert dx>0, "Requiring a dx>0 for stress analysis"
             assert density>0, "Requiring a density>0 for stress analysis"
             for link in self.links:
+                if link.centroid_vector:
+                    continue
                 link.centroid(dx, density)
         
         if rotation > 2*pi:
@@ -506,12 +508,11 @@ class Mechanism:
             if i == 2:
                 self.links[i].translate(-self.links[i].connections[self.connections[i][1]].x, -self.links[i].connections[self.connections[i][1]].y)
                 self.links[i].rotate(-vector_angle(self.links[i].connections[self.connections[i][1]], self.links[i].connections[self.connections[i][0]])+ground_rotation)
-                #Do not know why but this fixed the error
-                #if abs(vector_angle(self.links[i].connections[self.connections[i][1]], self.links[i].connections[self.connections[i][0]])+self.rotation+pi-pi*2)<1e-10:
-                #    self.links[i].rotate(pi)
+                self.links[i].rotation = -vector_angle(self.links[i].connections[self.connections[i][1]], self.links[i].connections[self.connections[i][0]])+ground_rotation
             else:
                 self.links[i].translate(-self.links[i].connections[self.connections[i][0]].x, -self.links[i].connections[self.connections[i][0]].y)
                 self.links[i].rotate(-vector_angle(self.links[i].connections[self.connections[i][0]], self.links[i].connections[self.connections[i][1]])+ground_rotation)
+                self.links[i].rotation = -vector_angle(self.links[i].connections[self.connections[i][0]], self.links[i].connections[self.connections[i][1]])+ground_rotation
     
     
     def copy(self):
