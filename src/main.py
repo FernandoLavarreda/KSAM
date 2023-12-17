@@ -1,10 +1,14 @@
 #Fernando Lavarreda
 
 import os
+import platform
 from gui.gui import GUI
 from examples import examples
 
-icon = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))+"\\Icon\\pistons.ico"
+icon = ""
+if platform.system().lower() == "windows":
+    icon = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))+"\\Icon\\pistons.ico"
+
 compresor = examples.build_compresor(3)
 machine = examples.build_machine()
 vline = examples.build_vline()

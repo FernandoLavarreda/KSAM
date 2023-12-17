@@ -1212,5 +1212,6 @@ if __name__ == "__main__":
     print(a)
     a.rotate_angle(180)
     print(a+b)
-    print(topological_sort([[1, 2, 3], [4], [5], [], [], []]))    
+    print(topological_sort([[1, 2, 3], [4], [5], [], [], []]))
+    print(topological_sort([[1], [4], [], [], [5, 2, 3], [6], []]))
     
