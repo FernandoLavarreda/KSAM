@@ -8,8 +8,11 @@ if __name__ == "__main__":
     parent = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     sys.path.append(parent)
 
-from mechanisms import geometry as gm
-
+try:
+    from mechanisms import geometry as gm
+except ImportError:
+    from ..mechanisms import geometry as gm
+    
 
 def build_machine():
     c1 = gm.Curve(gm.Vector(0, 0), [gm.Vector(x/20, (x/20)**2) for x in range(11)], function=gm.Function(start=0, end=0.5, process=lambda x: x**2))

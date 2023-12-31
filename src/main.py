@@ -1,3 +1,4 @@
+#!../venv/bin/python3.11
 #Fernando Lavarreda
 
 import os
